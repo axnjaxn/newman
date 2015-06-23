@@ -136,7 +136,7 @@ int getIterations(const std::vector<HPComplex>& X,
 class MyDisplay : public Display {
 protected:
   ByteImage canvas, img;
-  bool renderflag, drawflag;
+  bool renderflag, drawflag, previewflag;
   HPComplex corner, sz;
   int N = 256;
 
@@ -144,25 +144,56 @@ protected:
     if (event.type == SDL_KEYDOWN)
       switch (event.key.keysym.sym) {
       case SDLK_F5: drawflag = true; break;
+      case SDLK_BACKSPACE: reset(); break;
+      case SDLK_RETURN: previewflag = false; renderflag = true; break;
+      case SDLK_SPACE: previewflag = true; renderflag = true; break;
       }
     else if (event.type == SDL_MOUSEBUTTONDOWN) {
-      int x = event.button.x;
-      int y = event.button.y;
-
-      HPComplex new_sz;
-      new_sz.re = sz.re * 0.1;
-      new_sz.im = sz.im * 0.1;
-      
-      corner.re = corner.re + x * sz.re - (img.nc / 2) * new_sz.re;
-      corner.im = corner.im + (img.nr - y - 1) * sz.im - (img.nr / 2) * new_sz.im;
-
-      renderflag = true;
+      if (event.button.button == SDL_BUTTON_RIGHT) {
+	int x = event.button.x;
+	int y = event.button.y;
+	
+	HPComplex pt;
+	pt.re = corner.re + x * sz.re;
+	pt.im = corner.im + (img.nr - y - 1) * sz.im;
+	
+	sz.re *= 0.5;
+	sz.im *= 0.5;
+	
+	corner.re = pt.re - (img.nc / 2) * sz.re;
+	corner.im = pt.im - (img.nr / 2) * sz.im;
+	
+	renderflag = previewflag = true;
+      }
+      else {
+	//TODO
+      }
     }
 
     Display::handleEvent(event);
   }
+
+  void preview() {
+    HPComplex pt;
+    int its;
+    LPComplex Z, C;
+    for (int r = 0; r < img.nr; r++)
+      for (int c = 0; c < img.nc; c++) {
+	pt.re = corner.re + c * sz.re;
+	pt.im = corner.im + (img.nr - r - 1) * sz.im;
+	Z.re = C.re = pt.re.get_d();
+	Z.im = C.im = pt.im.get_d();
+	for (its = 0; its < N; its++) {
+	  Z = sq(Z) + C;
+	  if (Z.re * Z.re + Z.im * Z.im > 4.0) break;
+	}
+	img.at(r, c, 0) = img.at(r, c, 1) = img.at(r, c, 2) = clip(255 - its);
+      }
+  }
   
   void render() {
+    if (previewflag) {preview(); return;}
+    
     std::vector<HPComplex> X(N), A(N), B(N), C(N);
     
     Uint32 ticks = SDL_GetTicks();
@@ -180,9 +211,7 @@ protected:
 	pt.re = corner.re + c * sz.re;
 	pt.im = corner.im + (img.nr - r - 1) * sz.im;
 	its = getIterations(X, A, B, C, center, pt, 2.0);
-	img.at(r, c, 0) = 255 - its;
-	img.at(r, c, 1) = 255 - its;
-	img.at(r, c, 2) = 255 - its;
+	img.at(r, c, 0) = img.at(r, c, 1) = img.at(r, c, 2) = clip(255 - its);
 	if (mapflag) img.at(r, c, 1) = 255;
       }
 
@@ -207,17 +236,19 @@ protected:
     
     Display::update();
   }
-  
-public:
-  MyDisplay(int h, int w) : Display(h, w), img(h, w, 3) {
-    renderflag = drawflag = true;
+
+  void reset() {
+    previewflag = renderflag = drawflag = true;
 
     corner.re = -2.5;
     corner.im = -1.5;
     
-    sz.re = (1.5 - corner.re) / w;
-    sz.im = (1.5 - corner.im) / h;
+    sz.re = (1.5 - corner.re) / img.nc;
+    sz.im = (1.5 - corner.im) / img.nr;
   }
+  
+public:
+  MyDisplay(int h, int w) : Display(h, w), img(h, w, 3) {reset();}
 };
 
 int main(int argc, char* argv[]) {
