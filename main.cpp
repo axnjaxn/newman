@@ -11,12 +11,26 @@ typedef struct {
   mpf_class re, im;
 } HPComplex;
 
-void getRefOrbit(std::vector<HPComplex>& orbit, const HPComplex& c) {
-  orbit[0].re = c.re;
-  orbit[0].im = c.im;
-  for (int i = 1; i < orbit.size(); i++) {
-    orbit[i].re = orbit[i - 1].re * orbit[i - 1].re - orbit[i - 1].im * orbit[i - 1].im + c.re;
-    orbit[i].im = 2 * orbit[i - 1].re * orbit[i - 1].im + c.im;
+void getRefOrbit(std::vector<HPComplex>& X,
+		 std::vector<HPComplex>& A, std::vector<HPComplex>& B, std::vector<HPComplex>& C,
+		 const HPComplex& c) {
+  X[0].re = c.re; X[0].im = c.im;
+  A[0].re = 1.0;  A[0].im = 0.0;
+  B[0].re = 0.0;  B[0].im = 0.0;
+  C[0].re = 0.0;  C[0].im = 0.0;
+  
+  for (int i = 1; i < X.size(); i++) {
+    X[i].re = X[i - 1].re * X[i - 1].re - X[i - 1].im * X[i - 1].im + c.re;
+    X[i].im = 2 * X[i - 1].re * X[i - 1].im + c.im;
+
+    A[i].re = 2.0 * (X[i - 1].re * A[i - 1].re - X[i - 1].im * A[i - 1].im) + 1;
+    A[i].im = 2.0 * (X[i - 1].re * A[i - 1].im + X[i - 1].im * A[i - 1].re);
+
+    B[i].re = 2.0 * (X[i - 1].re * B[i - 1].re - X[i - 1].im * B[i - 1].im) + A[i].re * A[i].re - A[i].im * A[i].im;
+    B[i].im = 2.0 * (X[i - 1].re * B[i - 1].im + X[i - 1].im * B[i - 1].re + A[i].re * A[i].im);
+
+    C[i].re = 2.0 * (X[i - 1].re * C[i - 1].re - X[i - 1].im * C[i - 1].im + A[i].re * B[i].re - A[i].im * B[i].im);
+    C[i].im = 2.0 * (X[i - 1].re * C[i - 1].im + X[i - 1].im * C[i - 1].re + A[i].re * B[i].im + A[i].im * B[i].re);
   }
 }
 
@@ -70,11 +84,11 @@ int main(int argc, char* argv[]) {
 
   mpf_class sz = 0.005;
 
-  std::vector<HPComplex> orbit(256);
+  std::vector<HPComplex> X(256), A(256), B(256), C(256);
   HPComplex center;
   center.re = corner.re + (w / 2) * sz;
   center.im = corner.im + (h / 2) * sz;
-  getRefOrbit(orbit, center);
+  getRefOrbit(X, A, B, C, center);
   
   HPComplex pt;
   int its;
@@ -82,7 +96,7 @@ int main(int argc, char* argv[]) {
     for (int c = 0; c < img.nc; c++) {
       pt.re = corner.re + c * sz;
       pt.im = corner.im + (img.nr - r - 1) * sz;
-      its = getIterations(orbit, center, pt, 2.0);
+      its = getIterations(X, center, pt, 2.0);
       img.at(r, c) = 255 - its;
     }
 
