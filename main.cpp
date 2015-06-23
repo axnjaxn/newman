@@ -156,9 +156,10 @@ int getIterations(const std::vector<HPComplex>& X,
 class MyDisplay : public Display {
 protected:
   ByteImage canvas, img;
-  bool renderflag, redrawflag, previewflag;
+  bool renderflag, redrawflag, previewflag, mousedown;
   HPComplex corner, sz;
-  int N = 256;
+  int N = 256, mx, my;
+  float scale;
 
   void handleEvent(SDL_Event event) {
     if (event.type == SDL_KEYDOWN)
@@ -169,25 +170,45 @@ protected:
       case SDLK_SPACE: previewflag = true; renderflag = true; break;
       }
     else if (event.type == SDL_MOUSEBUTTONDOWN) {
+      mx = event.button.x;
+      my = event.button.y;
+	
       if (event.button.button == SDL_BUTTON_RIGHT) {
-	int x = event.button.x;
-	int y = event.button.y;
+	mousedown = false;
 	
 	HPComplex pt;
-	pt.re = corner.re + x * sz.re;
-	pt.im = corner.im + (img.nr - y - 1) * sz.im;
-	
-	sz.re *= 0.5;
-	sz.im *= 0.5;
-	
+	pt.re = corner.re + mx * sz.re;
+	pt.im = corner.im + (img.nr - my - 1) * sz.im;
 	corner.re = pt.re - (img.nc / 2) * sz.re;
 	corner.im = pt.im - (img.nr / 2) * sz.im;
 	
 	renderflag = previewflag = true;
       }
       else {
-	//TODO
+	mousedown = true;
       }
+    }
+    else if (event.type == SDL_MOUSEMOTION && mousedown) {
+      int dy = event.button.y - my;
+      scale = (float)pow(16.0, (float)dy / img.nr);
+      if (scale > 8.0) scale = 8.0;
+      if (scale < 0.125) scale = 0.125;
+      redrawflag = true;
+    }
+    else if (event.type == SDL_MOUSEBUTTONUP && mousedown) {
+      mousedown = false;
+      
+      HPComplex pt;
+      pt.re = corner.re + mx * sz.re;
+      pt.im = corner.im + (img.nr - my - 1) * sz.im;
+
+      sz.re *= (1.0 / scale);
+      sz.im *= (1.0 / scale);
+      
+      corner.re = pt.re - mx * sz.re;
+      corner.im = pt.im - (img.nr - my - 1) * sz.im;
+
+      renderflag = previewflag = true;
     }
 
     Display::handleEvent(event);
@@ -251,7 +272,13 @@ protected:
     }
 
     if (redrawflag) {
-      canvas = img;
+      if (!mousedown) {
+	canvas = img;
+      }
+      else {
+	ByteImage scaled = img.scaled(scale * img.nr, scale * img.nc);
+	canvas.blit(scaled, (int)(my - scale * my), (int)(mx - scale * mx));//TODO
+      }
       updateImage(canvas);
       redrawflag = false;
     }
