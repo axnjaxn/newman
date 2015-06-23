@@ -4,6 +4,10 @@
 using namespace byteimage;
 
 typedef struct {
+  mpf_class re, im;
+} HPComplex;
+
+typedef struct {
   double re, im;
 } LPComplex;
 
@@ -28,9 +32,16 @@ LPComplex operator*(const LPComplex& a, const LPComplex& b) {
   return c;
 }
 
-typedef struct {
-  mpf_class re, im;
-} HPComplex;
+double sqMag(const LPComplex& a) {
+  return a.re * a.re + a.im * a.im;
+}
+
+LPComplex descend(const HPComplex& a) {
+  LPComplex b;
+  b.re = a.re.get_d();
+  b.im = a.im.get_d();
+  return b;
+}
 
 void getRefOrbit(std::vector<HPComplex>& X,
 		 std::vector<HPComplex>& A, std::vector<HPComplex>& B, std::vector<HPComplex>& C,
@@ -39,10 +50,19 @@ void getRefOrbit(std::vector<HPComplex>& X,
   A[0].re = 1.0;  A[0].im = 0.0;
   B[0].re = 0.0;  B[0].im = 0.0;
   C[0].re = 0.0;  C[0].im = 0.0;
-  
+
+  mpf_class sqmag;
   for (int i = 1; i < X.size(); i++) {
     X[i].re = X[i - 1].re * X[i - 1].re - X[i - 1].im * X[i - 1].im + c.re;
     X[i].im = 2 * X[i - 1].re * X[i - 1].im + c.im;
+
+    if (sqMag(descend(X[i])) > 4.0) {
+      X.resize(i);
+      A.resize(i);
+      B.resize(i);
+      C.resize(i);
+      return;
+    }
 
     A[i].re = 2.0 * (X[i - 1].re * A[i - 1].re - X[i - 1].im * A[i - 1].im) + 1.0;
     A[i].im = 2.0 * (X[i - 1].re * A[i - 1].im + X[i - 1].im * A[i - 1].re);
@@ -136,14 +156,14 @@ int getIterations(const std::vector<HPComplex>& X,
 class MyDisplay : public Display {
 protected:
   ByteImage canvas, img;
-  bool renderflag, drawflag, previewflag;
+  bool renderflag, redrawflag, previewflag;
   HPComplex corner, sz;
   int N = 256;
 
   void handleEvent(SDL_Event event) {
     if (event.type == SDL_KEYDOWN)
       switch (event.key.keysym.sym) {
-      case SDLK_F5: drawflag = true; break;
+      case SDLK_F5: redrawflag = true; break;
       case SDLK_BACKSPACE: reset(); break;
       case SDLK_RETURN: previewflag = false; renderflag = true; break;
       case SDLK_SPACE: previewflag = true; renderflag = true; break;
@@ -195,14 +215,12 @@ protected:
     if (previewflag) {preview(); return;}
     
     std::vector<HPComplex> X(N), A(N), B(N), C(N);
-    
-    Uint32 ticks = SDL_GetTicks();
-  
+      
     HPComplex center;
     center.re = corner.re + (img.nc / 2) * sz.re;
     center.im = corner.im + (img.nr / 2) * sz.im;
     getRefOrbit(X, A, B, C, center);
-  
+    
     HPComplex pt;
     int its;
     for (int r = 0; r < img.nr; r++)
@@ -215,30 +233,34 @@ protected:
 	if (mapflag) img.at(r, c, 1) = 255;
       }
 
-    ticks = SDL_GetTicks() - ticks;
-    printf("Time: %dms\n", ticks);
-
-    drawflag = true;
+    redrawflag = true;
   }
 
   void update() {
     if (renderflag) {
+      SDL_SetWindowTitle(window, "Rendering...");
+      Uint32 ticks = SDL_GetTicks();
       render();
+      ticks = SDL_GetTicks() - ticks;
+      char str[256];
+      sprintf(str, "Time: %dms", ticks);
+      SDL_SetWindowTitle(window, str);
+    
       renderflag = false;
-      drawflag = true;
+      redrawflag = true;
     }
 
-    if (drawflag) {
+    if (redrawflag) {
       canvas = img;
       updateImage(canvas);
-      drawflag = false;
+      redrawflag = false;
     }
     
     Display::update();
   }
 
   void reset() {
-    previewflag = renderflag = drawflag = true;
+    previewflag = renderflag = redrawflag = true;
 
     corner.re = -2.5;
     corner.im = -1.5;
