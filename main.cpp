@@ -79,7 +79,7 @@ void getRefOrbit(std::vector<HPComplex>& X,
 bool isUnstable(const LPComplex& bterm, const LPComplex& cterm) {
   double bmag = bterm.re * bterm.re + bterm.im * bterm.im;
   double cmag = cterm.re * cterm.re + cterm.im * cterm.im;
-  return (cmag <= 100 * bmag);
+  return (cmag >= 100 * bmag);
 }
 
 bool mapflag;
