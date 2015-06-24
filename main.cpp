@@ -336,6 +336,8 @@ protected:
   }
 
   void update() {
+    frameDelay = 0;
+    
     if (renderflag) {
       SDL_SetWindowTitle(window, "Rendering...");
       Uint32 ticks = SDL_GetTicks();
@@ -358,13 +360,14 @@ protected:
       updateImage(canvas);
       redrawflag = false;
     }
+
+    frameDelay = 100;
     
     Display::update();
   }
 
   void reset() {
-    previewflag = renderflag = redrawflag = true;
-    drawlines = false;
+    previewflag = renderflag = redrawflag = drawlines = true;
 
     N = 256;
     
@@ -451,7 +454,12 @@ protected:
   }
   
 public:
-  MyDisplay(int h, int w) : Display(h, w), img(h, w, 3) {
+  MyDisplay(int h, int w) : Display(h, w), img(h, w, 3), canvas(h, w) {
+    for (int r = 0; r < h; r++)
+      for (int c = 0; c < w; c++)
+	canvas.at(r, c) = (((r / 4) + (c / 4)) & 1)? 255 : 192;
+    canvas = canvas.toColor();
+	  
     constructDefaultPalette();
     reset();
   }
