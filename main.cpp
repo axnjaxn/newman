@@ -361,7 +361,7 @@ protected:
       redrawflag = false;
     }
 
-    frameDelay = 100;
+    if (!mousedown) frameDelay = 100;
     
     Display::update();
   }
