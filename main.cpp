@@ -222,6 +222,7 @@ protected:
     else if (event.type == SDL_MOUSEBUTTONDOWN) {
       mx = event.button.x;
       my = event.button.y;
+      scale = 1.0;
 	
       if (event.button.button == SDL_BUTTON_RIGHT) mousedown = 2;
       else mousedown = 1;
@@ -393,19 +394,10 @@ protected:
   }
 
   void constructDefaultPalette() {
-    CachedPalette src = CachedPalette::fromColors({Color(255), Color(255, 64, 0), Color(0, 64, 255), Color(128, 255, 64), Color(255, 255, 0), Color(0, 0, 255)});
-    std::vector<Color> v;
-    v.push_back(src[0]);
-    for (int i = 1, j = 1; i < src.levels(); i++) {
-      pal = LinearPalette(src[i - 1], src[i]);
-      for (int k = 0; k < j; k++)
-	v.push_back(pal.inUnit((k + 1.0) / j));
-      j <<= 1;
-    }
-
-    src = CachedPalette(v.size());
-    for (int i = 0; i < src.levels(); i++) src[i] = v[i];
-    
+    CachedPalette src = CachedPalette::fromColors({Color(255), Color(255, 64, 0), Color(0, 64, 255), Color(128, 255, 64), Color(255, 255, 0), Color(0, 0, 255),
+	  Color(128, 128, 192), Color(255, 0, 255), Color(255, 192, 192), Color(128, 160, 64),
+	  Color(192, 64, 0), Color(32, 32, 160), Color(160, 192, 32), Color(255, 32, 192), Color(64, 0, 192),
+	  Color(32, 128, 192), Color(32, 0, 255), Color(160, 32, 96), Color(255, 160, 64)});
     pal = LinearPalette(src);
     palN = (src.levels() - 1) * 256;
     
