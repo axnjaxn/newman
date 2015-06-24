@@ -273,6 +273,20 @@ protected:
     if (its == N) return Color(0);
     return pal.inUnit((float)its / palN);    
   }
+
+  bool drawLine() {
+    updateImage(img);
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+      if (event.type == SDL_MOUSEBUTTONDOWN || event.type == SDL_KEYDOWN) {
+	SDL_PushEvent(&event);
+	return true;
+      }
+      Display::handleEvent(event);
+    }
+    Display::update();
+    if (exitflag) return true;
+  }
   
   void preview() {
     HPComplex pt;
@@ -294,14 +308,7 @@ protected:
 	color = getColor(its);
 	Rp[i] = color.r; Gp[i] = color.g; Bp[i] = color.b;
       }
-      if (drawlines) {
-	updateImage(img);
-	SDL_Event event;
-	while (SDL_PollEvent(&event))
-	  Display::handleEvent(event);
-	Display::update();
-	if (exitflag) break;
-      }
+      if (drawlines && drawLine()) break;
     }
   }
   
@@ -330,14 +337,7 @@ protected:
 	Rp[i] = color.r; Gp[i] = color.g; Bp[i] = color.b;
 	//if (mapflag) img.at(r, c, 1) = 255;
       }
-      if (drawlines) {
-	updateImage(img);
-	SDL_Event event;
-	while (SDL_PollEvent(&event))
-	  Display::handleEvent(event);
-	Display::update();
-	if (exitflag) break;
-      }
+      if (drawlines && drawLine()) break;
     }
 
     redrawflag = true;
@@ -393,7 +393,7 @@ protected:
   }
 
   void constructDefaultPalette() {
-    CachedPalette src = CachedPalette::fromColors({Color(255), Color(255, 0, 0), Color(255, 255, 0), Color(128, 255, 64), Color(0, 0, 255)});
+    CachedPalette src = CachedPalette::fromColors({Color(255), Color(255, 64, 0), Color(0, 64, 255), Color(128, 255, 64), Color(255, 255, 0), Color(0, 0, 255)});
     std::vector<Color> v;
     v.push_back(src[0]);
     for (int i = 1, j = 1; i < src.levels(); i++) {
