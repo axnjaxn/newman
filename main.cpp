@@ -1,4 +1,5 @@
 #include <byteimage/byteimage_sdl2.h>
+#include <byteimage/palette.h>
 #include <gmpxx.h>
 
 using namespace byteimage;
@@ -193,6 +194,7 @@ protected:
   HPComplex corner, sz;
   int N = 256, mx, my;
   float scale;
+  LinearPalette pal; int palN;
 
   void handleEvent(SDL_Event event) {
     if (event.type == SDL_KEYDOWN)
@@ -201,6 +203,10 @@ protected:
       case SDLK_BACKSPACE: reset(); break;
       case SDLK_RETURN: previewflag = false; renderflag = true; break;
       case SDLK_SPACE: previewflag = true; renderflag = true; break;
+      case SDLK_UP: N += 256; printf("%d iterations\n", N); previewflag = true; renderflag = true; break;
+      case SDLK_DOWN: if (N > 256) N -= 256; printf("%d iterations\n", N); previewflag = true; renderflag = true; break;
+      case SDLK_F2: save(); break;
+      case SDLK_F3: load(); break;
       }
     else if (event.type == SDL_MOUSEBUTTONDOWN) {
       mx = event.button.x;
@@ -247,12 +253,19 @@ protected:
     Display::handleEvent(event);
   }
 
+  Color getColor(int its) {
+    if (its == N) return Color(0);
+    return pal.inUnit((float)its / palN);    
+  }
+  
   void preview() {
     HPComplex pt;
     int its;
     LPComplex Z, C;
-    for (int r = 0; r < img.nr; r++)
-      for (int c = 0; c < img.nc; c++) {
+    Color color;
+    Byte *Rp = img.R(), *Gp = img.G(), *Bp = img.B();
+    for (int r = 0, i = 0; r < img.nr; r++)
+      for (int c = 0; c < img.nc; c++, i++) {
 	pt.re = corner.re + c * sz.re;
 	pt.im = corner.im + (img.nr - r - 1) * sz.im;
 	Z.re = C.re = pt.re.get_d();
@@ -261,7 +274,8 @@ protected:
 	  Z = sq(Z) + C;
 	  if (Z.re * Z.re + Z.im * Z.im > 4.0) break;
 	}
-	img.at(r, c, 0) = img.at(r, c, 1) = img.at(r, c, 2) = clip(255 - its);
+	color = getColor(its);
+	Rp[i] = color.r; Gp[i] = color.g; Bp[i] = color.b;
       }
   }
   
@@ -277,14 +291,17 @@ protected:
     
     HPComplex pt;
     int its;
-    for (int r = 0; r < img.nr; r++)
-      for (int c = 0; c < img.nc; c++) {
+    Color color;
+    Byte *Rp = img.R(), *Gp = img.G(), *Bp = img.B();
+    for (int r = 0, i = 0; r < img.nr; r++)
+      for (int c = 0; c < img.nc; c++, i++) {
 	mapflag = false;
 	pt.re = corner.re + c * sz.re;
 	pt.im = corner.im + (img.nr - r - 1) * sz.im;
 	its = getIterations(X, A, B, C, center, pt, 2.0);
-	img.at(r, c, 0) = img.at(r, c, 1) = img.at(r, c, 2) = clip(255 - its);
-	if (mapflag) img.at(r, c, 1) = 255;
+	color = getColor(its);
+	Rp[i] = color.r; Gp[i] = color.g; Bp[i] = color.b;
+	//if (mapflag) img.at(r, c, 1) = 255;
       }
 
     redrawflag = true;
@@ -326,9 +343,78 @@ protected:
     sz.re = (1.5 - corner.re) / img.nc;
     sz.im = (1.5 - corner.im) / img.nr;
   }
+
+  void constructDefaultPalette() {
+    CachedPalette src = CachedPalette::fromColors({
+  	  Color(255), Color(0), Color(128, 0, 0), Color(255, 0, 0),
+	  Color(128, 0, 64), Color(0, 0, 128),
+	  Color(64, 64, 96), Color(128, 128, 64), Color(192, 192, 32), Color(255, 255, 0)});
+    pal = LinearPalette(src);
+    palN = (src.levels() - 1) * 256;
+    
+  }
+
+  void save() {
+    HPComplex center;
+    center.re = corner.re + (img.nc / 2) * sz.re;
+    center.im = corner.im + (img.nr / 2) * sz.im;
+
+    printf("Enter a filename:\n");
+    char fn[256];
+    scanf("%s", fn);
+
+    FILE* fp = fopen(fn, "w");
+    if (fp) {
+      fprintf(fp, "%d\n", N);
+      mpf_out_str(fp, 10, 0, center.re.get_mpf_t());
+      fprintf(fp, "\n");
+      mpf_out_str(fp, 10, 0, center.im.get_mpf_t());
+      fprintf(fp, "\n");
+      mpf_out_str(fp, 10, 0, sz.re.get_mpf_t());
+      fprintf(fp, "\n");
+      mpf_out_str(fp, 10, 0, sz.im.get_mpf_t());
+      fprintf(fp, "\n");
+      fclose(fp);
+      printf("Saved to %s\n", fn);
+    }
+    else {
+      printf("Could not save to %s\n", fn);
+    }    
+  }
+
+  void load() {
+    printf("Enter a filename:\n");
+    char fn[256];
+    scanf("%s", fn);
+
+    char buf[10 * 1024];
+
+    HPComplex center;
+    FILE* fp = fopen(fn, "r");
+    if (fp) {
+      fscanf(fp, "%d\n", &N);
+      fscanf(fp, "%s\n", buf); center.re = buf;
+      fscanf(fp, "%s\n", buf); center.im = buf;
+      fscanf(fp, "%s\n", buf); sz.re = buf;
+      fscanf(fp, "%s\n", buf); sz.im = buf;
+      fclose(fp);
+
+      corner.re = center.re - (img.nc / 2) * sz.re;
+      corner.im = center.im - (img.nr / 2) * sz.im;
+      
+      previewflag = renderflag = true;
+      printf("Loaded from %s\n", fn);
+    }
+    else {
+      printf("Could not load from %s\n", fn);
+    }
+  }
   
 public:
-  MyDisplay(int h, int w) : Display(h, w), img(h, w, 3) {reset();}
+  MyDisplay(int h, int w) : Display(h, w), img(h, w, 3) {
+    constructDefaultPalette();
+    reset();
+  }
 };
 
 int main(int argc, char* argv[]) {
