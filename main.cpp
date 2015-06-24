@@ -190,9 +190,9 @@ void blitSampled(ByteImage& target, const ByteImage& src, float sx, float sy, in
 class MyDisplay : public Display {
 protected:
   ByteImage canvas, img;
-  bool renderflag, redrawflag, previewflag, mousedown;
+  bool renderflag, redrawflag, previewflag, mousedown, drawlines;
   HPComplex corner, sz;
-  int N = 256, mx, my;
+  int N, mx, my;
   float scale;
   LinearPalette pal; int palN;
 
@@ -207,6 +207,16 @@ protected:
       case SDLK_DOWN: if (N > 256) N -= 256; printf("%d iterations\n", N); previewflag = true; renderflag = true; break;
       case SDLK_F2: save(); break;
       case SDLK_F3: load(); break;
+      case SDLK_d:
+	drawlines = !drawlines;
+	printf("Draw lines mode: %s\n", drawlines? "on" : "off");
+	break;
+      case SDLK_i:
+	printf("How many iterations?\n");
+	scanf("%d", &N);
+	printf("%d iterations.\n", N);
+	previewflag = renderflag = true;
+	break;
       }
     else if (event.type == SDL_MOUSEBUTTONDOWN) {
       mx = event.button.x;
@@ -229,9 +239,7 @@ protected:
     }
     else if (event.type == SDL_MOUSEMOTION && mousedown) {
       int dy = event.button.y - my;
-      scale = (float)pow(16.0, (float)dy / img.nr);
-      if (scale > 8.0) scale = 8.0;
-      if (scale < 0.125) scale = 0.125;
+      scale = (float)pow(32.0, (float)dy / img.nr);
       redrawflag = true;
     }
     else if (event.type == SDL_MOUSEBUTTONUP && mousedown) {
@@ -261,22 +269,32 @@ protected:
   void preview() {
     HPComplex pt;
     int its;
-    LPComplex Z, C;
+    LPComplex Z, Z0;
     Color color;
     Byte *Rp = img.R(), *Gp = img.G(), *Bp = img.B();
-    for (int r = 0, i = 0; r < img.nr; r++)
+    if (drawlines) img = canvas;
+    for (int r = 0, i = 0; r < img.nr; r++) {
       for (int c = 0; c < img.nc; c++, i++) {
 	pt.re = corner.re + c * sz.re;
 	pt.im = corner.im + (img.nr - r - 1) * sz.im;
-	Z.re = C.re = pt.re.get_d();
-	Z.im = C.im = pt.im.get_d();
+	Z.re = Z0.re = pt.re.get_d();
+	Z.im = Z0.im = pt.im.get_d();
 	for (its = 0; its < N; its++) {
-	  Z = sq(Z) + C;
+	  Z = sq(Z) + Z0;
 	  if (Z.re * Z.re + Z.im * Z.im > 4.0) break;
 	}
 	color = getColor(its);
 	Rp[i] = color.r; Gp[i] = color.g; Bp[i] = color.b;
       }
+      if (drawlines) {
+	updateImage(img);
+	SDL_Event event;
+	while (SDL_PollEvent(&event))
+	  Display::handleEvent(event);
+	Display::update();
+	if (exitflag) break;
+      }
+    }
   }
   
   void render() {
@@ -293,7 +311,8 @@ protected:
     int its;
     Color color;
     Byte *Rp = img.R(), *Gp = img.G(), *Bp = img.B();
-    for (int r = 0, i = 0; r < img.nr; r++)
+    if (drawlines) img = canvas;
+    for (int r = 0, i = 0; r < img.nr; r++) {
       for (int c = 0; c < img.nc; c++, i++) {
 	mapflag = false;
 	pt.re = corner.re + c * sz.re;
@@ -303,6 +322,15 @@ protected:
 	Rp[i] = color.r; Gp[i] = color.g; Bp[i] = color.b;
 	//if (mapflag) img.at(r, c, 1) = 255;
       }
+      if (drawlines) {
+	updateImage(img);
+	SDL_Event event;
+	while (SDL_PollEvent(&event))
+	  Display::handleEvent(event);
+	Display::update();
+	if (exitflag) break;
+      }
+    }
 
     redrawflag = true;
   }
@@ -336,7 +364,10 @@ protected:
 
   void reset() {
     previewflag = renderflag = redrawflag = true;
+    drawlines = false;
 
+    N = 256;
+    
     corner.re = -2.5;
     corner.im = -1.5;
     
@@ -345,10 +376,19 @@ protected:
   }
 
   void constructDefaultPalette() {
-    CachedPalette src = CachedPalette::fromColors({
-  	  Color(255), Color(0), Color(128, 0, 0), Color(255, 0, 0),
-	  Color(128, 0, 64), Color(0, 0, 128),
-	  Color(64, 64, 96), Color(128, 128, 64), Color(192, 192, 32), Color(255, 255, 0)});
+    CachedPalette src = CachedPalette::fromColors({Color(255), Color(255, 0, 0), Color(255, 255, 0), Color(128, 255, 64), Color(0, 0, 255)});
+    std::vector<Color> v;
+    v.push_back(src[0]);
+    for (int i = 1, j = 1; i < src.levels(); i++) {
+      pal = LinearPalette(src[i - 1], src[i]);
+      for (int k = 0; k < j; k++)
+	v.push_back(pal.inUnit((k + 1.0) / j));
+      j <<= 1;
+    }
+
+    src = CachedPalette(v.size());
+    for (int i = 0; i < src.levels(); i++) src[i] = v[i];
+    
     pal = LinearPalette(src);
     palN = (src.levels() - 1) * 256;
     
