@@ -79,50 +79,16 @@ void getRefOrbit(std::vector<HPComplex>& X,
 bool isUnstable(const LPComplex& bterm, const LPComplex& cterm) {
   double bmag = bterm.re * bterm.re + bterm.im * bterm.im;
   double cmag = cterm.re * cterm.re + cterm.im * cterm.im;
-  return (cmag >= 100 * bmag);
-}
-
-bool mapflag;
-
-int getIterationsOld(const std::vector<HPComplex>& X, const HPComplex& center, const LPComplex& eps, float bailout) {
-  mapflag = true;
-  
-  bailout *= bailout;
-  
-  mpf_class dist2;
-  LPComplex d, d2, dnext, z;
-  HPComplex Y;
-  d.re = eps.re;
-  d.im = eps.im;
-  
-  for (int i = 0; i < X.size(); i++) {
-    z.re = X[i].re.get_d();
-    z.im = X[i].im.get_d();
-
-    d2 = sq(d);
-    dnext = z * d;
-    dnext.re = 2 * dnext.re + d2.re + eps.re;
-    dnext.im = 2 * dnext.im + d2.im + eps.im;
-
-    Y.re = X[i].re + dnext.re;
-    Y.im = X[i].im + dnext.im;
-
-    dist2 = Y.re * Y.re + Y.im * Y.im;
-    if (dist2.get_d() > bailout) return i;
-
-    d = dnext;
-  }
-  
-  return X.size();
+  return (cmag && 1e5 * cmag >= bmag);
 }
 
 int getIterations(const std::vector<HPComplex>& X,
 		  const std::vector<HPComplex>& A, const std::vector<HPComplex>& B, const std::vector<HPComplex>& C,
-		  const HPComplex& center, const HPComplex& pt, float bailout) {
+		  const HPComplex& center, const HPComplex& pt, float bailout, int N) {
   bailout *= bailout;
   
   mpf_class dist2;
-  LPComplex eps, eps2, eps3, a, b, c, d;
+  LPComplex eps, eps2, eps3, a, b, c;
   HPComplex Y;
   Y.re = pt.re - center.re;
   Y.im = pt.im - center.im;
@@ -131,7 +97,8 @@ int getIterations(const std::vector<HPComplex>& X,
   eps.im = Y.im.get_d();
   eps2 = sq(eps);
   eps3 = eps * eps2;
-  
+
+  std::vector<LPComplex> d(X.size());
   for (int i = 0; i < X.size(); i++) {
     a.re = A[i].re.get_d(); a.im = A[i].im.get_d();
     b.re = B[i].re.get_d(); b.im = B[i].im.get_d();
@@ -140,18 +107,41 @@ int getIterations(const std::vector<HPComplex>& X,
     a = a * eps;
     b = b * eps2;
     c = c * eps3;
-    d = a + b + c;
+    if (isUnstable(b, c)) {
+      d.resize(i);
+      break;
+    }
+    
+    d[i] = a + b + c;
+  }
 
-    if (isUnstable(b, c)) return getIterationsOld(X, center, eps, bailout);
+  {
+    int i = d.size() - 1;
+    Y.re = X[i].re + d[i].re;
+    Y.im = X[i].im + d[i].im;
+    if (sqMag(descend(Y)) <= bailout)
+      for (int i = 0; i < d.size(); i++) {
+	Y.re = X[i].re + d[i].re;
+	Y.im = X[i].im + d[i].im;
+	
+	if (sqMag(descend(Y)) > bailout) return i;
+      }
+  }
 
-    Y.re = X[i].re + d.re;
-    Y.im = X[i].im + d.im;
+  HPComplex Yn;
+  Y.re = Yn.re = pt.re;
+  Y.im = Yn.im = pt.im;
+  for (int i = 0; i < N; i++) {
+    Yn.re = Y.re * Y.re - Y.im * Y.im + pt.re;
+    Yn.im = 2 * Y.re * Y.im + pt.im;
 
-    dist2 = Y.re * Y.re + Y.im * Y.im;
-    if (dist2.get_d() > bailout) return i;
+    if (sqMag(descend(Yn)) > 4.0) return i;
+
+    Y.re = Yn.re;
+    Y.im = Yn.im;      
   }
   
-  return X.size();
+  return N;
 }
 
 void blitSampled(ByteImage& target, const ByteImage& src, float sx, float sy, int dr, int dc) {
@@ -314,7 +304,12 @@ protected:
   }
   
   void render() {
-    if (previewflag) {preview(); return;}
+    const double minpreview = 1.5e-16;
+    
+    if (previewflag && sz.re.get_d() >= minpreview && sz.im.get_d() >= minpreview) {
+      preview();
+      return;
+    }
     
     std::vector<HPComplex> X(N), A(N), B(N), C(N);
       
@@ -330,10 +325,9 @@ protected:
     if (drawlines) img = canvas;
     for (int r = 0, i = 0; r < img.nr; r++) {
       for (int c = 0; c < img.nc; c++, i++) {
-	mapflag = false;
 	pt.re = corner.re + c * sz.re;
 	pt.im = corner.im + (img.nr - r - 1) * sz.im;
-	its = getIterations(X, A, B, C, center, pt, 2.0);
+	its = getIterations(X, A, B, C, center, pt, 2.0, N);
 	color = getColor(its);
 	Rp[i] = color.r; Gp[i] = color.g; Bp[i] = color.b;
 	//if (mapflag) img.at(r, c, 1) = 255;
