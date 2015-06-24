@@ -190,9 +190,10 @@ void blitSampled(ByteImage& target, const ByteImage& src, float sx, float sy, in
 class MyDisplay : public Display {
 protected:
   ByteImage canvas, img;
-  bool renderflag, redrawflag, previewflag, mousedown, drawlines;
+  bool renderflag, redrawflag, previewflag, drawlines;
   HPComplex corner, sz;
-  int N, mx, my;
+  int N;
+  int mousedown, mx, my, nx, ny;
   float scale;
   LinearPalette pal; int palN;
 
@@ -222,43 +223,47 @@ protected:
       mx = event.button.x;
       my = event.button.y;
 	
-      if (event.button.button == SDL_BUTTON_RIGHT) {
-	mousedown = false;
-	
+      if (event.button.button == SDL_BUTTON_RIGHT) mousedown = 2;
+      else mousedown = 1;
+    }
+    else if (event.type == SDL_MOUSEMOTION) {
+      if (mousedown == 1) {
+	int dx = event.button.x - mx;
+	int dy = event.button.y - my;
+	float dist = sqrt(dx * dx + dy * dy);
+	if (SDL_GetModState() & KMOD_SHIFT) dist = -dist;
+	scale = (float)pow(32.0, dist / img.nr);
+	redrawflag = true;
+      }
+      else if (mousedown == 2) {
+	nx = event.button.x;
+	ny = event.button.y;
+	redrawflag = true;
+      }
+    }
+    else if (event.type == SDL_MOUSEBUTTONUP && mousedown) {
+      if (mousedown == 1) {
 	HPComplex pt;
 	pt.re = corner.re + mx * sz.re;
 	pt.im = corner.im + (img.nr - my - 1) * sz.im;
-	corner.re = pt.re - (img.nc / 2) * sz.re;
-	corner.im = pt.im - (img.nr / 2) * sz.im;
+	
+	sz.re *= (1.0 / scale);
+	sz.im *= (1.0 / scale);
+	
+	corner.re = pt.re - mx * sz.re;
+	corner.im = pt.im - (img.nr - my - 1) * sz.im;
 	
 	renderflag = previewflag = true;
       }
-      else {
-	mousedown = true;
+
+      else if (mousedown == 2) {
+	corner.re = corner.re + (mx - nx) * sz.re;
+	corner.im = corner.im + (ny - my) * sz.im;
+
+	renderflag = previewflag = true;
       }
-    }
-    else if (event.type == SDL_MOUSEMOTION && mousedown) {
-      int dx = event.button.x - mx;
-      int dy = event.button.y - my;
-      float dist = sqrt(dx * dx + dy * dy);
-      if (SDL_GetModState() & KMOD_SHIFT) dist = -dist;
-      scale = (float)pow(32.0, dist / img.nr);
-      redrawflag = true;
-    }
-    else if (event.type == SDL_MOUSEBUTTONUP && mousedown) {
-      mousedown = false;
-      
-      HPComplex pt;
-      pt.re = corner.re + mx * sz.re;
-      pt.im = corner.im + (img.nr - my - 1) * sz.im;
 
-      sz.re *= (1.0 / scale);
-      sz.im *= (1.0 / scale);
-      
-      corner.re = pt.re - mx * sz.re;
-      corner.im = pt.im - (img.nr - my - 1) * sz.im;
-
-      renderflag = previewflag = true;
+      mousedown = 0;
     }
 
     Display::handleEvent(event);
@@ -355,12 +360,16 @@ protected:
     }
 
     if (redrawflag) {
-      if (!mousedown) {
-	canvas = img;
-      }
-      else {
+      if (mousedown == 1){
 	canvas.fill(255);
 	blitSampled(canvas, img, scale, scale, my - scale * my, mx - scale * mx);
+      }
+      else if (mousedown == 2) {
+	canvas.fill(255);
+	canvas.blit(img, ny - my, nx - mx);
+      }
+      else {
+	canvas = img;
       }
       updateImage(canvas);
       redrawflag = false;
