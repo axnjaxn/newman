@@ -238,8 +238,11 @@ protected:
       }
     }
     else if (event.type == SDL_MOUSEMOTION && mousedown) {
+      int dx = event.button.x - mx;
       int dy = event.button.y - my;
-      scale = (float)pow(32.0, (float)dy / img.nr);
+      float dist = sqrt(dx * dx + dy * dy);
+      if (SDL_GetModState() & KMOD_SHIFT) dist = -dist;
+      scale = (float)pow(32.0, dist / img.nr);
       redrawflag = true;
     }
     else if (event.type == SDL_MOUSEBUTTONUP && mousedown) {
@@ -355,8 +358,10 @@ protected:
       if (!mousedown) {
 	canvas = img;
       }
-      else
+      else {
+	canvas.fill(255);
 	blitSampled(canvas, img, scale, scale, my - scale * my, mx - scale * mx);
+      }
       updateImage(canvas);
       redrawflag = false;
     }
