@@ -189,6 +189,14 @@ protected:
   float scale;
   LinearPalette pal; int palN;
 
+  void screenshot() {
+    char fn[256];
+    int t = (int)time(NULL);
+    sprintf(fn, "%d.png", t);
+    img.save_filename(fn);
+    printf("Saved screenshot to %s\n", fn);
+  }
+  
   void handleEvent(SDL_Event event) {
     if (event.type == SDL_KEYDOWN)
       switch (event.key.keysym.sym) {
@@ -201,6 +209,7 @@ protected:
       case SDLK_F2: save(); break;
       case SDLK_F3: load(); break;
       case SDLK_p: constructNewPalette(); renderflag = previewflag = true; break;
+      case SDLK_F11: screenshot(); break;
       case SDLK_d:
 	drawlines = !drawlines;
 	printf("Draw lines mode: %s\n", drawlines? "on" : "off");
@@ -251,8 +260,11 @@ protected:
       }
 
       else if (mousedown == 2) {
-	corner.re = corner.re + (mx - nx) * sz.re;
-	corner.im = corner.im + (ny - my) * sz.im;
+	HPComplex mv;
+	mv.re = mx - nx;
+	mv.im = ny - my;
+	corner.re = corner.re + mv.re * sz.re;
+	corner.im = corner.im + mv.im * sz.im;
 
 	renderflag = previewflag = true;
       }
@@ -284,6 +296,8 @@ protected:
   }
   
   void preview() {
+    SDL_SetWindowTitle(window, "Rendering (preview mode)...");
+    
     HPComplex pt;
     int its;
     LPComplex Z, Z0;
