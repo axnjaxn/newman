@@ -108,30 +108,32 @@ int getIterations(const std::vector<HPComplex>& X,
     b = b * eps2;
     c = c * eps3;
     if (isUnstable(b, c)) {
-      d.resize(i);
+      d.resize(i / 2);
       break;
     }
     
     d[i] = a + b + c;
   }
 
-  {
-    int i = d.size() - 1;
-    Y.re = X[i].re + d[i].re;
-    Y.im = X[i].im + d[i].im;
-    if (sqMag(descend(Y)) <= bailout)
-      for (int i = 0; i < d.size(); i++) {
-	Y.re = X[i].re + d[i].re;
-	Y.im = X[i].im + d[i].im;
-	
-	if (sqMag(descend(Y)) > bailout) return i;
-      }
+  int low = 0, high = d.size() - 1, mid = d.size() / 2, found = d.size();
+  while (low <= high) {
+    Y.re = X[mid].re + d[mid].re;
+    Y.im = X[mid].im + d[mid].im;
+    
+    if (sqMag(descend(Y)) <= bailout) low = mid + 1;
+    else {
+      high = mid - 1;
+      found = mid;
+    }
+    
+    mid = (low + high) / 2;
   }
-
+  if (found < d.size()) return found;
+  
   HPComplex Yn;
-  Y.re = Yn.re = pt.re;
-  Y.im = Yn.im = pt.im;
-  for (int i = 0; i < N; i++) {
+  Y.re = Yn.re = X[d.size() - 1].re + d[d.size() - 1].re;
+  Y.im = Yn.im = X[d.size() - 1].im + d[d.size() - 1].im;
+  for (int i = d.size(); i < N; i++) {
     Yn.re = Y.re * Y.re - Y.im * Y.im + pt.re;
     Yn.im = 2 * Y.re * Y.im + pt.im;
 
@@ -198,6 +200,7 @@ protected:
       case SDLK_DOWN: if (N > 256) N -= 256; printf("%d iterations\n", N); previewflag = true; renderflag = true; break;
       case SDLK_F2: save(); break;
       case SDLK_F3: load(); break;
+      case SDLK_p: constructNewPalette(); renderflag = previewflag = true; break;
       case SDLK_d:
 	drawlines = !drawlines;
 	printf("Draw lines mode: %s\n", drawlines? "on" : "off");
@@ -269,7 +272,8 @@ protected:
     updateImage(img);
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
-      if (event.type == SDL_MOUSEBUTTONDOWN || event.type == SDL_KEYDOWN) {
+      if (event.type == SDL_MOUSEBUTTONDOWN
+	  || (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE)) {
 	SDL_PushEvent(&event);
 	return true;
       }
@@ -376,6 +380,8 @@ protected:
   }
 
   void reset() {
+    constructDefaultPalette();
+    
     previewflag = renderflag = redrawflag = drawlines = true;
 
     N = 256;
@@ -395,6 +401,20 @@ protected:
     pal = LinearPalette(src);
     palN = (src.levels() - 1) * 256;
     
+  }
+
+  void constructNewPalette() {
+    const double PI = 3.14159265358979;;
+    CachedPalette src(256);
+    float hue, sat, lum;
+    for (int i = 0; i < src.levels(); i++) {
+      hue = 180 * cos(i / 1.2 + 2.0) + 135 + 45 * cos(i / 0.5);						      
+      sat = 1.0;
+      lum = 0.6 + 0.4 * sin(i / 5.5 + 1.1);
+      hsl2rgb(hue, sat, lum, src[i].r, src[i].g, src[i].b);
+    }
+    pal = LinearPalette(src);
+    palN = (src.levels() - 1) * 128;
   }
 
   void save() {
@@ -460,7 +480,6 @@ public:
 	canvas.at(r, c) = (((r / 4) + (c / 4)) & 1)? 255 : 192;
     canvas = canvas.toColor();
 	  
-    constructDefaultPalette();
     reset();
   }
 };
