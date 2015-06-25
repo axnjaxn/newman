@@ -44,16 +44,23 @@ LPComplex descend(const HPComplex& a) {
   return b;
 }
 
-void getRefOrbit(std::vector<HPComplex>& X, const HPComplex& X0, float bailout = 2.0) {
-  bailout *= bailout;
-  
+inline bool bailedOut(HPComplex& z) {
+  /*
+  static mpf_class d2, b2 = 4.0;
+  d2 = z.re * z.re + z.im * z.im;
+  return (d2 > b2);
+  */
+  return sqMag(descend(z)) > 4.0;
+}
+
+void getRefOrbit(std::vector<HPComplex>& X, const HPComplex& X0) {
   X[0].re = X0.re; X[0].im = X0.im;
-  
+
   for (int i = 1; i < X.size(); i++) {
     X[i].re = X[i - 1].re * X[i - 1].re - X[i - 1].im * X[i - 1].im + X0.re;
-    X[i].im = 2 * X[i - 1].re * X[i - 1].im + X0.im;
-
-    if (sqMag(descend(X[i])) > bailout) {
+    X[i].im = 2.0 * (X[i - 1].re * X[i - 1].im) + X0.im;
+    
+    if (bailedOut(X[i])) {
       X.resize(i);
       return;
     }
@@ -62,6 +69,10 @@ void getRefOrbit(std::vector<HPComplex>& X, const HPComplex& X0, float bailout =
 
 void getSeries(std::vector<HPComplex>& A, std::vector<HPComplex>& B, std::vector<HPComplex>& C,
 	       const std::vector<HPComplex>& X) {
+  A.resize(X.size());
+  B.resize(X.size());
+  C.resize(X.size());
+  
   A[0].re = 1.0;  A[0].im = 0.0;
   B[0].re = 0.0;  B[0].im = 0.0;
   C[0].re = 0.0;  C[0].im = 0.0;
@@ -72,7 +83,7 @@ void getSeries(std::vector<HPComplex>& A, std::vector<HPComplex>& B, std::vector
     A[i].im = 2.0 * (X[i - 1].re * A[i - 1].im + X[i - 1].im * A[i - 1].re);
 
     B[i].re = 2.0 * (X[i - 1].re * B[i - 1].re - X[i - 1].im * B[i - 1].im) + A[i].re * A[i].re - A[i].im * A[i].im;
-    B[i].im = 2.0 * (X[i - 1].re * B[i - 1].im + X[i - 1].im * B[i - 1].re +  A[i].re * A[i].im);
+    B[i].im = 2.0 * (X[i - 1].re * B[i - 1].im + X[i - 1].im * B[i - 1].re + A[i].re * A[i].im);
 
     C[i].re = 2.0 * (X[i - 1].re * C[i - 1].re - X[i - 1].im * C[i - 1].im + A[i].re * B[i].re - A[i].im * B[i].im);
     C[i].im = 2.0 * (X[i - 1].re * C[i - 1].im + X[i - 1].im * C[i - 1].re + A[i].re * B[i].im + A[i].im * B[i].re);
@@ -87,14 +98,11 @@ bool isUnstable(const LPComplex& bterm, const LPComplex& cterm) {
 
 int getIterations(const std::vector<HPComplex>& X,
 		  const std::vector<HPComplex>& A, const std::vector<HPComplex>& B, const std::vector<HPComplex>& C,
-		  const HPComplex& center, const HPComplex& pt, float bailout, int N) {
-  bailout *= bailout;
-  
-  mpf_class dist2;
+		  const HPComplex& ref, const HPComplex& Y0, int N) {
   LPComplex eps, eps2, eps3, a, b, c;
   HPComplex Y;
-  Y.re = pt.re - center.re;
-  Y.im = pt.im - center.im;
+  Y.re = Y0.re - ref.re;
+  Y.im = Y0.im - ref.im;
   
   eps.re = Y.re.get_d();
   eps.im = Y.im.get_d();
@@ -111,7 +119,7 @@ int getIterations(const std::vector<HPComplex>& X,
     b = b * eps2;
     c = c * eps3;
     if (isUnstable(b, c)) {
-      d.resize(i / 2);
+      d.resize(i / 2 + 1);
       break;
     }
     
@@ -122,8 +130,9 @@ int getIterations(const std::vector<HPComplex>& X,
   while (low <= high) {
     Y.re = X[mid].re + d[mid].re;
     Y.im = X[mid].im + d[mid].im;
-    
-    if (sqMag(descend(Y)) <= bailout) low = mid + 1;
+
+    if (!bailedOut(Y))
+      low = mid + 1;
     else {
       high = mid - 1;
       found = mid;
@@ -137,10 +146,10 @@ int getIterations(const std::vector<HPComplex>& X,
   Y.re = Yn.re = X[d.size() - 1].re + d[d.size() - 1].re;
   Y.im = Yn.im = X[d.size() - 1].im + d[d.size() - 1].im;
   for (int i = d.size(); i < N; i++) {
-    Yn.re = Y.re * Y.re - Y.im * Y.im + pt.re;
-    Yn.im = 2 * Y.re * Y.im + pt.im;
+    Yn.re = Y.re * Y.re - Y.im * Y.im + Y0.re;
+    Yn.im = 2.0 * (Y.re * Y.im) + Y0.im;
 
-    if (sqMag(descend(Yn)) > 4.0) return i;
+    if (bailedOut(Yn)) return i;
 
     Y.re = Yn.re;
     Y.im = Yn.im;      
@@ -315,7 +324,7 @@ protected:
 	Z.im = Z0.im = pt.im.get_d();
 	for (its = 0; its < N; its++) {
 	  Z = sq(Z) + Z0;
-	  if (Z.re * Z.re + Z.im * Z.im > 4.0) break;
+	  if (sqMag(Z) > 4.0) break;
 	}
 	color = getColor(its);
 	Rp[i] = color.r; Gp[i] = color.g; Bp[i] = color.b;
@@ -332,12 +341,32 @@ protected:
       return;
     }
     
-    std::vector<HPComplex> X(N), A(N), B(N), C(N);
+    std::vector<Pt> probe_pts;
+    for (int c = 0; c < img.nc; c += 2) {
+      probe_pts.push_back(Pt(img.nr / 4, c));
+      probe_pts.push_back(Pt(img.nr / 2, c));
+      probe_pts.push_back(Pt(3 * img.nr / 4, c));
+    }
 
-    HPComplex center;
-    center.re = corner.re + (img.nc / 2) * sz.re;
-    center.im = corner.im + (img.nr / 2) * sz.im;
-    getRefOrbit(X, center);
+    printf("Probing %d pts at full accuracy...\n", (int)probe_pts.size());
+    
+    std::vector<HPComplex> X, A, B, C;
+    HPComplex probe, ref;
+    for (auto pt : probe_pts) {
+      X.resize(N);
+      probe.re = corner.re + pt.c * sz.re;
+      probe.im = corner.im + (img.nr - pt.r - 1) * sz.im;
+      getRefOrbit(X, probe);
+
+      if (X.size() > A.size()) {
+	A = std::move(X);
+	ref = probe;
+      }
+    }
+
+    printf("Deepest probe was %d / %d iterations\n", (int)A.size(), N);
+
+    X = std::move(A);    
     getSeries(A, B, C, X);
     
     HPComplex pt;
@@ -349,10 +378,9 @@ protected:
       for (int c = 0; c < img.nc; c++, i++) {
 	pt.re = corner.re + c * sz.re;
 	pt.im = corner.im + (img.nr - r - 1) * sz.im;
-	its = getIterations(X, A, B, C, center, pt, 2.0, N);
+	its = getIterations(X, A, B, C, ref, pt, N);
 	color = getColor(its);
 	Rp[i] = color.r; Gp[i] = color.g; Bp[i] = color.b;
-	//if (mapflag) img.at(r, c, 1) = 255;
       }
       if (drawlines && drawLine()) break;
     }
