@@ -44,27 +44,30 @@ LPComplex descend(const HPComplex& a) {
   return b;
 }
 
-void getRefOrbit(std::vector<HPComplex>& X,
-		 std::vector<HPComplex>& A, std::vector<HPComplex>& B, std::vector<HPComplex>& C,
-		 const HPComplex& c) {
-  X[0].re = c.re; X[0].im = c.im;
+void getRefOrbit(std::vector<HPComplex>& X, const HPComplex& X0, float bailout = 2.0) {
+  bailout *= bailout;
+  
+  X[0].re = X0.re; X[0].im = X0.im;
+  
+  for (int i = 1; i < X.size(); i++) {
+    X[i].re = X[i - 1].re * X[i - 1].re - X[i - 1].im * X[i - 1].im + X0.re;
+    X[i].im = 2 * X[i - 1].re * X[i - 1].im + X0.im;
+
+    if (sqMag(descend(X[i])) > bailout) {
+      X.resize(i);
+      return;
+    }
+  }
+}
+
+void getSeries(std::vector<HPComplex>& A, std::vector<HPComplex>& B, std::vector<HPComplex>& C,
+	       const std::vector<HPComplex>& X) {
   A[0].re = 1.0;  A[0].im = 0.0;
   B[0].re = 0.0;  B[0].im = 0.0;
   C[0].re = 0.0;  C[0].im = 0.0;
 
   mpf_class sqmag;
   for (int i = 1; i < X.size(); i++) {
-    X[i].re = X[i - 1].re * X[i - 1].re - X[i - 1].im * X[i - 1].im + c.re;
-    X[i].im = 2 * X[i - 1].re * X[i - 1].im + c.im;
-
-    if (sqMag(descend(X[i])) > 4.0) {
-      X.resize(i);
-      A.resize(i);
-      B.resize(i);
-      C.resize(i);
-      return;
-    }
-
     A[i].re = 2.0 * (X[i - 1].re * A[i - 1].re - X[i - 1].im * A[i - 1].im) + 1.0;
     A[i].im = 2.0 * (X[i - 1].re * A[i - 1].im + X[i - 1].im * A[i - 1].re);
 
@@ -330,11 +333,12 @@ protected:
     }
     
     std::vector<HPComplex> X(N), A(N), B(N), C(N);
-      
+
     HPComplex center;
     center.re = corner.re + (img.nc / 2) * sz.re;
     center.im = corner.im + (img.nr / 2) * sz.im;
-    getRefOrbit(X, A, B, C, center);
+    getRefOrbit(X, center);
+    getSeries(A, B, C, X);
     
     HPComplex pt;
     int its;
