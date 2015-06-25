@@ -77,7 +77,6 @@ void getSeries(std::vector<HPComplex>& A, std::vector<HPComplex>& B, std::vector
   B[0].re = 0.0;  B[0].im = 0.0;
   C[0].re = 0.0;  C[0].im = 0.0;
 
-  mpf_class sqmag;
   for (int i = 1; i < X.size(); i++) {
     A[i].re = 2.0 * (X[i - 1].re * A[i - 1].re - X[i - 1].im * A[i - 1].im) + 1.0;
     A[i].im = 2.0 * (X[i - 1].re * A[i - 1].im + X[i - 1].im * A[i - 1].re);
@@ -304,7 +303,7 @@ protected:
       Display::handleEvent(event);
     }
     Display::update();
-    if (exitflag) return true;
+    return exitflag;
   }
   
   void preview() {
