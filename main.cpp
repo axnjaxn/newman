@@ -190,6 +190,95 @@ void blitSampled(ByteImage& target, const ByteImage& src, float sx, float sy, in
     }      
 }
 
+float interpHue(float f1, float f2, float t) {
+  float diff = f2 - f1;
+  if (diff > 180.0) diff = diff - 360.0;
+  else if (diff <= -180.0) diff = diff + 360.0;
+  f2 = f1 + t * diff;
+  if (f2 < 0.0) return f2 + 360.0;
+  else if (f2 >= 360.0) return f2 - 360.0;
+  else return f2;
+}
+
+CachedPalette getMultiWave(int N) {
+  FILE* fp = fopen("palette.pal", "r");
+  
+  int nhuecycles;
+  fscanf(fp, "%d", &nhuecycles);
+
+  std::vector< std::vector<float> > hue_cycles;
+  std::vector<int> periods(nhuecycles);
+  for (int i = 0; i < nhuecycles; i++) {
+    int nhues;
+    fscanf(fp, "%d", &nhues);
+
+    std::vector<float> cycle(nhues);
+    for (int j = 0; j < cycle.size(); j++)
+      fscanf(fp, "%f", &cycle[j]);
+    hue_cycles.push_back(cycle);
+    
+    fscanf(fp, "%d", &periods[i]);
+  }
+
+  int long_period;
+  fscanf(fp, "%d", &long_period);
+
+  int nsats;
+  fscanf(fp, "%d", &nsats);
+  std::vector<float> sats(nsats);
+  for (int i = 0; i < sats.size(); i++)
+    fscanf(fp, "%f", &sats[i]);
+
+  int sat_period;
+  fscanf(fp, "%d", &sat_period);
+
+  int nlums;
+  fscanf(fp, "%d", &nlums);
+  std::vector<float> lums(nlums);
+  std::vector<int> lum_periods(nlums);
+  for (int i = 0; i < lums.size(); i++) {
+    fscanf(fp, "%f", &lums[i]);
+    fscanf(fp, "%d", &lum_periods[i]);
+  }
+    
+  fclose(fp);
+
+  CachedPalette pal(N);
+
+  for (int i = 0; i < N; i++) {
+    float th0 = hue_cycles.size() * (i % long_period) / (float)long_period;
+    int c0 = (int)th0;
+    int c1 = (c0 + 1) % hue_cycles.size();
+
+    float t0 = hue_cycles[c0].size() * (i % periods[c0]) / (float)periods[c0];
+    int x0 = (int)t0;
+    int x1 = (x0 + 1) % hue_cycles[c0].size();
+    t0 = interpHue(hue_cycles[c0][x0], hue_cycles[c0][x1], t0 - x0);
+    
+    float t1 = hue_cycles[c1].size() * (i % periods[c1]) / (float)periods[c1];
+    int y0 = (int)t1;
+    int y1 = (y0 + 1) % hue_cycles[c1].size();
+    t1 = interpHue(hue_cycles[c1][y0], hue_cycles[c1][y1], t1 - y0);
+
+    th0 = interpHue(t0, t1, th0 - c0);
+
+    float ts = sats.size() * (i % sat_period) / (float)sat_period;
+    int s0 = (int)ts;
+    int s1 = (s0 + 1) % sats.size();
+    ts -= s0;
+    ts = (1.0 - ts) * sats[s0] + ts * sats[s1];
+
+    float tl = 0.0;
+    for (int j = 0; j < lums.size(); j++)
+      tl += lums[j] * sin(i * 2.0 * 3.14159265358979 / lum_periods[j]);
+    tl = 1.0 / (1.0 + exp(-tl));
+    
+    hsl2rgb(th0, ts, tl, pal[i].r, pal[i].g, pal[i].b);
+  }
+  
+  return pal;
+}
+
 class MyDisplay : public Display {
 protected:
   ByteImage canvas, img;
@@ -198,7 +287,7 @@ protected:
   int N;
   int mousedown, mx, my, nx, ny;
   float scale;
-  LinearPalette pal; int palN;
+  CachedPalette pal;
 
   void screenshot() {
     char fn[256];
@@ -218,7 +307,7 @@ protected:
       case SDLK_UP: N += 256; printf("%d iterations\n", N); previewflag = true; renderflag = true; break;
       case SDLK_DOWN: if (N > 256) N -= 256; printf("%d iterations\n", N); previewflag = true; renderflag = true; break;
       case SDLK_F2: save(); break;
-      case SDLK_F3: load(); break;
+      case SDLK_F3: constructDefaultPalette(); load(); break;
       case SDLK_p: constructNewPalette(); renderflag = previewflag = true; break;
       case SDLK_F11: screenshot(); break;
       case SDLK_d:
@@ -288,7 +377,7 @@ protected:
 
   Color getColor(int its) {
     if (its == N) return Color(0);
-    return pal.inUnit((float)its / palN);    
+    return pal[its];
   }
 
   bool drawLine() {
@@ -443,25 +532,14 @@ protected:
 	  Color(128, 128, 192), Color(255, 0, 255), Color(255, 192, 192), Color(128, 160, 64),
 	  Color(192, 64, 0), Color(32, 32, 160), Color(160, 192, 32), Color(255, 32, 192), Color(64, 0, 192),
 	  Color(32, 128, 192), Color(32, 0, 255), Color(160, 32, 96), Color(255, 160, 64)});
-    pal = LinearPalette(src);
-    palN = (src.levels() - 1) * 256;
-    
+    int palN = (src.levels() - 1) * 256;
+    pal = LinearPalette(src).cache(palN);    
   }
 
   void constructNewPalette() {
-    const double PI = 3.14159265358979;;
-    CachedPalette src(256);
-    float hue, sat, lum;
-    for (int i = 0; i < src.levels(); i++) {
-      hue = 180 * cos(i / 1.2 + 2.0) + 135 + 45 * cos(i / 0.5);						      
-      sat = 1.0;
-      lum = 0.6 + 0.4 * sin(i / 5.5 + 1.1);
-      hsl2rgb(hue, sat, lum, src[i].r, src[i].g, src[i].b);
-    }
-    pal = LinearPalette(src);
-    palN = (src.levels() - 1) * 128;
+    pal = getMultiWave(N);
   }
-
+  
   void save() {
     HPComplex center;
     center.re = corner.re + (img.nc / 2) * sz.re;
