@@ -45,11 +45,6 @@ LPComplex descend(const HPComplex& a) {
 }
 
 inline bool bailedOut(HPComplex& z) {
-  /*
-  static mpf_class d2, b2 = 4.0;
-  d2 = z.re * z.re + z.im * z.im;
-  return (d2 > b2);
-  */
   return sqMag(descend(z)) > 4.0;
 }
 
@@ -412,81 +407,80 @@ protected:
     return exitflag;
   }
   
-  void preview() {
-    SDL_SetWindowTitle(window, "Rendering (hardware arithmetic)...");
-    
-    HPComplex pt;
-    int its;
-    LPComplex Z, Z0;
-    Color color;
-    Byte *Rp = img.R(), *Gp = img.G(), *Bp = img.B();
-    if (drawlines) img = canvas;
-    for (int r = 0, i = 0; r < img.nr; r++) {
-      for (int c = 0; c < img.nc; c++, i++) {
-	pt.re = corner.re + c * sz.re;
-	pt.im = corner.im + (img.nr - r - 1) * sz.im;
-	Z.re = Z0.re = pt.re.get_d();
-	Z.im = Z0.im = pt.im.get_d();
-	for (its = 0; its < N; its++) {
-	  Z = sq(Z) + Z0;
-	  if (sqMag(Z) > 4.0) break;
-	}
-	color = getColor(its);
-	Rp[i] = color.r; Gp[i] = color.g; Bp[i] = color.b;
-      }
-      if (drawlines && drawLine()) break;
-    }
-  }
-  
   void render() {
     const double minpreview = 1.5e-16;
+    bool hwflag = false;
     
     if (sz.re.get_d() >= minpreview && sz.im.get_d() >= minpreview) {
-      preview();
-      return;
-    }
-    
-    std::vector<Pt> probe_pts;
-    for (int c = 0; c < img.nc; c++) {
-      probe_pts.push_back(Pt(img.nr / 4, c));
-      probe_pts.push_back(Pt(img.nr / 2, c));
-      probe_pts.push_back(Pt(3 * img.nr / 4, c));
-    }
-    for (int r = 0; r < img.nr; r++)
-      probe_pts.push_back(Pt(r, img.nc / 2));
-
-    std::vector<HPComplex> X, A, B, C;
-    HPComplex probe, ref;
-    for (auto pt : probe_pts) {
-      X.resize(N);
-      probe.re = corner.re + pt.c * sz.re;
-      probe.im = corner.im + (img.nr - pt.r - 1) * sz.im;
-      getRefOrbit(X, probe);
-
-      if (X.size() > A.size()) {
-	A = std::move(X);
-	ref = probe;
-      }
+      hwflag = true;
+      SDL_SetWindowTitle(window, "Rendering (hardware arithmetic)...");
     }
 
-    printf("Deepest probe was %d / %d iterations\n", (int)A.size(), N);
-
-    X = std::move(A);    
-    getSeries(A, B, C, X);
-    
+    //Both HW and Arb
     HPComplex pt;
     int its;
     Color color;
     Byte *Rp = img.R(), *Gp = img.G(), *Bp = img.B();
+
+    //HW
+    LPComplex Z, Z0;
+
+    //Arb
+    std::vector<Pt> probe_pts;
+    std::vector<HPComplex> X, A, B, C;
+    HPComplex probe, ref;
+
+    //Probe for deepest reference orbit
+    if (!hwflag) {
+      for (int c = 0; c < img.nc; c++) {
+	probe_pts.push_back(Pt(img.nr / 4, c));
+	probe_pts.push_back(Pt(img.nr / 2, c));
+	probe_pts.push_back(Pt(3 * img.nr / 4, c));
+      }
+      for (int r = 0; r < img.nr; r++)
+	probe_pts.push_back(Pt(r, img.nc / 2));
+      
+      for (auto pt : probe_pts) {
+	X.resize(N);
+	probe.re = corner.re + pt.c * sz.re;
+	probe.im = corner.im + (img.nr - pt.r - 1) * sz.im;
+	getRefOrbit(X, probe);
+
+	if (X.size() > A.size()) {
+	  A = std::move(X);
+	  ref = probe;
+	}
+      }
+
+      printf("Deepest probe was %d / %d iterations\n", (int)A.size(), N);
+
+      X = std::move(A);    
+      getSeries(A, B, C, X);
+    }
+    
     if (drawlines) img = canvas;
+    
     for (int r = 0, i = 0; r < img.nr; r++) {
       for (int c = 0; c < img.nc; c++, i++) {
 	pt.re = corner.re + c * sz.re;
 	pt.im = corner.im + (img.nr - r - 1) * sz.im;
-	its = getIterations(X, A, B, C, ref, pt, N);
+	
+	if (hwflag) {
+	  Z.re = Z0.re = pt.re.get_d();
+	  Z.im = Z0.im = pt.im.get_d();
+	  for (its = 0; its < N; its++) {
+	    Z = sq(Z) + Z0;
+	    if (sqMag(Z) > 4.0) break;
+	  }
+	}
+	else {
+	  its = getIterations(X, A, B, C, ref, pt, N);
+	}
+	
 	color = getColor(its);
 	Rp[i] = color.r; Gp[i] = color.g; Bp[i] = color.b;
       }
+
       if (drawlines && drawLine()) break;
     }
 
