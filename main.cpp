@@ -284,7 +284,7 @@ protected:
   ByteImage canvas, img;
   OSD_Printer osd;
   OSD_Scanner scanner;
-  bool renderflag, redrawflag, previewflag, drawlines;
+  bool renderflag, redrawflag, drawlines;
   HPComplex corner, sz;
   int N;
   int mousedown, mx, my, nx, ny;
@@ -305,21 +305,20 @@ protected:
       switch (event.key.keysym.sym) {
       case SDLK_F5: redrawflag = true; break;
       case SDLK_BACKSPACE: reset(); break;
-      case SDLK_RETURN: previewflag = false; renderflag = true; break;
-      case SDLK_SPACE: previewflag = true; renderflag = true; break;
+      case SDLK_RETURN: renderflag = true; break;
       case SDLK_UP:
 	N += 256;
-	previewflag = true; renderflag = true;
+	renderflag = true;
 	osd.print(OSD_Printer::string("%d iterations", N));
 	break;
       case SDLK_DOWN:
 	if (N > 256) N -= 256;
-	previewflag = true; renderflag = true;
+	renderflag = true;
 	osd.print(OSD_Printer::string("%d iterations", N));
 	break;
       case SDLK_F2: save(); break;
       case SDLK_F3: constructDefaultPalette(); load(); break;
-      case SDLK_p: constructNewPalette(); renderflag = previewflag = true; break;
+      case SDLK_p: constructNewPalette(); renderflag = true; break;
       case SDLK_F11: screenshot(); break;
       case SDLK_d:
 	drawlines = !drawlines;
@@ -329,7 +328,7 @@ protected:
 	if (scanner.getInt(canvas, "How many iterations?", n)) {
 	  N = n;
 	  osd.print(OSD_Printer::string("%d iterations.", N));
-	  previewflag = renderflag = true;
+	  renderflag = true;
 	}
 	break;
       }
@@ -368,7 +367,7 @@ protected:
 	corner.re = pt.re - mx * sz.re;
 	corner.im = pt.im - (img.nr - my - 1) * sz.im;
 	
-	renderflag = previewflag = true;
+	renderflag = true;
       }
 
       else if (mousedown == 2) {
@@ -378,7 +377,7 @@ protected:
 	corner.re = corner.re + mv.re * sz.re;
 	corner.im = corner.im + mv.im * sz.im;
 
-	renderflag = previewflag = true;
+	renderflag = true;
       }
 
       mousedown = 0;
@@ -414,7 +413,7 @@ protected:
   }
   
   void preview() {
-    SDL_SetWindowTitle(window, "Rendering (preview mode)...");
+    SDL_SetWindowTitle(window, "Rendering (hardware arithmetic)...");
     
     HPComplex pt;
     int its;
@@ -442,7 +441,7 @@ protected:
   void render() {
     const double minpreview = 1.5e-16;
     
-    if (previewflag && sz.re.get_d() >= minpreview && sz.im.get_d() >= minpreview) {
+    if (sz.re.get_d() >= minpreview && sz.im.get_d() >= minpreview) {
       preview();
       return;
     }
@@ -539,7 +538,7 @@ protected:
   void reset() {
     constructDefaultPalette();
     
-    previewflag = renderflag = redrawflag = drawlines = true;
+    renderflag = redrawflag = drawlines = true;
 
     N = 256;
     
@@ -609,7 +608,7 @@ protected:
       corner.re = center.re - (img.nc / 2) * sz.re;
       corner.im = center.im - (img.nr / 2) * sz.im;
       
-      previewflag = renderflag = true;
+      renderflag = true;
       osd.print("Loaded from " + fn);
     }
     else {
