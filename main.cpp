@@ -1,4 +1,4 @@
-#include <byteimage/byteimage_sdl2.h>
+#include <byteimage/osd.h>
 #include <byteimage/palette.h>
 #include <gmpxx.h>
 
@@ -282,6 +282,8 @@ CachedPalette getMultiWave(int N) {
 class MyDisplay : public Display {
 protected:
   ByteImage canvas, img;
+  OSD_Printer osd;
+  OSD_Scanner scanner;
   bool renderflag, redrawflag, previewflag, drawlines;
   HPComplex corner, sz;
   int N;
@@ -294,31 +296,41 @@ protected:
     int t = (int)time(NULL);
     sprintf(fn, "%d.png", t);
     img.save_filename(fn);
-    printf("Saved screenshot to %s\n", fn);
+    osd.print(OSD_Printer::string("Saved screenshot to %s", fn));
   }
   
   void handleEvent(SDL_Event event) {
+    int n;
     if (event.type == SDL_KEYDOWN)
       switch (event.key.keysym.sym) {
       case SDLK_F5: redrawflag = true; break;
       case SDLK_BACKSPACE: reset(); break;
       case SDLK_RETURN: previewflag = false; renderflag = true; break;
       case SDLK_SPACE: previewflag = true; renderflag = true; break;
-      case SDLK_UP: N += 256; printf("%d iterations\n", N); previewflag = true; renderflag = true; break;
-      case SDLK_DOWN: if (N > 256) N -= 256; printf("%d iterations\n", N); previewflag = true; renderflag = true; break;
+      case SDLK_UP:
+	N += 256;
+	previewflag = true; renderflag = true;
+	osd.print(OSD_Printer::string("%d iterations", N));
+	break;
+      case SDLK_DOWN:
+	if (N > 256) N -= 256;
+	previewflag = true; renderflag = true;
+	osd.print(OSD_Printer::string("%d iterations", N));
+	break;
       case SDLK_F2: save(); break;
       case SDLK_F3: constructDefaultPalette(); load(); break;
       case SDLK_p: constructNewPalette(); renderflag = previewflag = true; break;
       case SDLK_F11: screenshot(); break;
       case SDLK_d:
 	drawlines = !drawlines;
-	printf("Draw lines mode: %s\n", drawlines? "on" : "off");
+	osd.print(OSD_Printer::string("Draw lines mode: %s", drawlines? "on" : "off"));
 	break;
       case SDLK_i:
-	printf("How many iterations?\n");
-	scanf("%d", &N);
-	printf("%d iterations.\n", N);
-	previewflag = renderflag = true;
+	if (scanner.getInt(canvas, "How many iterations?", n)) {
+	  N = n;
+	  osd.print(OSD_Printer::string("%d iterations.", N));
+	  previewflag = renderflag = true;
+	}
 	break;
       }
     else if (event.type == SDL_MOUSEBUTTONDOWN) {
@@ -381,7 +393,13 @@ protected:
   }
 
   bool drawLine() {
-    updateImage(img);
+    if (osd.shouldDraw()) {
+      canvas = img;
+      osd.draw(canvas);
+      updateImage(canvas);
+    }
+    else
+      updateImage(img);
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
       if (event.type == SDL_MOUSEBUTTONDOWN
@@ -430,14 +448,14 @@ protected:
     }
     
     std::vector<Pt> probe_pts;
-    for (int c = 0; c < img.nc; c += 2) {
+    for (int c = 0; c < img.nc; c++) {
       probe_pts.push_back(Pt(img.nr / 4, c));
       probe_pts.push_back(Pt(img.nr / 2, c));
       probe_pts.push_back(Pt(3 * img.nr / 4, c));
     }
+    for (int r = 0; r < img.nr; r++)
+      probe_pts.push_back(Pt(r, img.nc / 2));
 
-    printf("Probing %d pts at full accuracy...\n", (int)probe_pts.size());
-    
     std::vector<HPComplex> X, A, B, C;
     HPComplex probe, ref;
     for (auto pt : probe_pts) {
@@ -492,6 +510,8 @@ protected:
       redrawflag = true;
     }
 
+    if (osd.shouldDraw()) redrawflag = true;
+    
     if (redrawflag) {
       if (mousedown == 1){
 	canvas.fill(255);
@@ -504,11 +524,14 @@ protected:
       else {
 	canvas = img;
       }
+
+      osd.draw(canvas);
+      
       updateImage(canvas);
       redrawflag = false;
     }
 
-    if (!mousedown) frameDelay = 100;
+    if (!mousedown) frameDelay = 25;
     
     Display::update();
   }
@@ -541,15 +564,14 @@ protected:
   }
   
   void save() {
+    std::string fn;
+    if (!scanner.getString(canvas, "Enter a filename to save:", fn)) return;
+
     HPComplex center;
     center.re = corner.re + (img.nc / 2) * sz.re;
     center.im = corner.im + (img.nr / 2) * sz.im;
-
-    printf("Enter a filename:\n");
-    char fn[256];
-    scanf("%s", fn);
-
-    FILE* fp = fopen(fn, "w");
+    
+    FILE* fp = fopen(fn.c_str(), "w");
     if (fp) {
       fprintf(fp, "%d\n", N);
       mpf_out_str(fp, 10, 0, center.re.get_mpf_t());
@@ -561,22 +583,21 @@ protected:
       mpf_out_str(fp, 10, 0, sz.im.get_mpf_t());
       fprintf(fp, "\n");
       fclose(fp);
-      printf("Saved to %s\n", fn);
+      osd.print("Saved to " + fn);
     }
     else {
-      printf("Could not save to %s\n", fn);
+      osd.print("Could not save to " + fn);
     }    
   }
 
   void load() {
-    printf("Enter a filename:\n");
-    char fn[256];
-    scanf("%s", fn);
+    std::string fn;
+    if (!scanner.getString(canvas, "Enter a filename to load:", fn)) return;
 
     char buf[10 * 1024];
 
     HPComplex center;
-    FILE* fp = fopen(fn, "r");
+    FILE* fp = fopen(fn.c_str(), "r");
     if (fp) {
       fscanf(fp, "%d\n", &N);
       fscanf(fp, "%s\n", buf); center.re = buf;
@@ -589,10 +610,10 @@ protected:
       corner.im = center.im - (img.nr / 2) * sz.im;
       
       previewflag = renderflag = true;
-      printf("Loaded from %s\n", fn);
+      osd.print("Loaded from " + fn);
     }
     else {
-      printf("Could not load from %s\n", fn);
+      osd.print("Could not load from " + fn);
     }
   }
   
@@ -602,7 +623,11 @@ public:
       for (int c = 0; c < w; c++)
 	canvas.at(r, c) = (((r / 4) + (c / 4)) & 1)? 255 : 192;
     canvas = canvas.toColor();
-	  
+
+    osd.setColors(Color(255), Color(0));
+    scanner.setColors(Color(255), Color(0));
+    scanner.setDisplay(this);
+    
     reset();
   }
 };
@@ -610,6 +635,10 @@ public:
 int main(int argc, char* argv[]) {
   const int w = 800;
   const int h = 600;
+
+  TextRenderer font("res/FreeSans.ttf", 20);
+  OSD_Printer::setFont(&font);
+  OSD_Scanner::setFont(&font);
   
   MyDisplay(h, w).main();
   
