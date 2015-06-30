@@ -331,15 +331,18 @@ protected:
       case SDLK_p: constructNewPalette(); renderflag = true; break;
       case SDLK_F11: screenshot(); break;
       case SDLK_s:
+	osd.hide();
 	smoothflag = !smoothflag;
 	osd.print(OSD_Printer::string("Smoothing: %s", smoothflag? "on" : "off"));
 	renderflag = true;
 	break;
       case SDLK_d:
+	osd.hide();
 	drawlines = !drawlines;
 	osd.print(OSD_Printer::string("Draw lines mode: %s", drawlines? "on" : "off"));
 	break;
       case SDLK_i:
+	osd.hide();
 	if (scanner.getInt(canvas, "How many iterations?", n)) {
 	  N = n;
 	  osd.print(OSD_Printer::string("%d iterations.", N));
@@ -447,12 +450,12 @@ protected:
 
     //Probe for deepest reference orbit
     if (!hwflag) {
-      for (int c = 0; c < img.nc; c++) {
+      for (int c = 0; c < img.nc; c += 2) {
 	probe_pts.push_back(Pt(img.nr / 4, c));
 	probe_pts.push_back(Pt(img.nr / 2, c));
 	probe_pts.push_back(Pt(3 * img.nr / 4, c));
       }
-      for (int r = 0; r < img.nr; r++)
+      for (int r = 0; r < img.nr; r += 2)
 	probe_pts.push_back(Pt(r, img.nc / 2));
       
       for (auto pt : probe_pts) {
@@ -586,6 +589,8 @@ protected:
   }
   
   void save() {
+    osd.hide();
+
     std::string fn;
     if (!scanner.getString(canvas, "Enter a filename to save:", fn)) return;
 
@@ -613,6 +618,8 @@ protected:
   }
 
   void load() {
+    osd.hide();
+    
     std::string fn;
     if (!scanner.getString(canvas, "Enter a filename to load:", fn)) return;
 
