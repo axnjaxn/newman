@@ -294,7 +294,7 @@ protected:
   ByteImage canvas, img;
   OSD_Printer osd;
   OSD_Scanner scanner;
-  bool renderflag, redrawflag, drawlines;
+  bool renderflag, redrawflag, drawlines, smoothflag;
   HPComplex corner, sz;
   int N;
   int mousedown, mx, my, nx, ny;
@@ -330,6 +330,11 @@ protected:
       case SDLK_F3: constructDefaultPalette(); load(); break;
       case SDLK_p: constructNewPalette(); renderflag = true; break;
       case SDLK_F11: screenshot(); break;
+      case SDLK_s:
+	smoothflag = !smoothflag;
+	osd.print(OSD_Printer::string("Smoothing: %s", smoothflag? "on" : "off"));
+	renderflag = true;
+	break;
       case SDLK_d:
 	drawlines = !drawlines;
 	osd.print(OSD_Printer::string("Draw lines mode: %s", drawlines? "on" : "off"));
@@ -491,9 +496,12 @@ protected:
 	}
 
 	if (its < N) {
-	  color.r = interp(pal[its - 1].r, pal[its].r, smoothing);
-	  color.g = interp(pal[its - 1].g, pal[its].g, smoothing);
-	  color.b = interp(pal[its - 1].b, pal[its].b, smoothing);
+	  if (smoothflag) {
+	    color.r = interp(pal[its - 1].r, pal[its].r, smoothing);
+	    color.g = interp(pal[its - 1].g, pal[its].g, smoothing);
+	    color.b = interp(pal[its - 1].b, pal[its].b, smoothing);
+	  }
+	  else color = pal[its];
 	}
 	else
 	  color = Color(0);
@@ -553,6 +561,7 @@ protected:
     constructDefaultPalette();
     
     renderflag = redrawflag = drawlines = true;
+    smoothflag = false;
 
     N = 256;
     
