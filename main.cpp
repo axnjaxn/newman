@@ -210,6 +210,12 @@ float interpHue(float f1, float f2, float t) {
   else return f2;
 }
 
+Color interp(const Color& c1, const Color& c2, float t) {
+  return Color(interp(c1.r, c2.r, t),
+	       interp(c1.g, c2.g, t),
+	       interp(c1.b, c2.b, t));	       
+}
+
 CachedPalette getMultiWave(int N) {
   FILE* fp = fopen("palette.pal", "r");
   
@@ -256,22 +262,6 @@ CachedPalette getMultiWave(int N) {
   CachedPalette pal(N);
 
   for (int i = 0; i < N; i++) {
-    float th0 = hue_cycles.size() * (i % long_period) / (float)long_period;
-    int c0 = (int)th0;
-    int c1 = (c0 + 1) % hue_cycles.size();
-
-    float t0 = hue_cycles[c0].size() * (i % periods[c0]) / (float)periods[c0];
-    int x0 = (int)t0;
-    int x1 = (x0 + 1) % hue_cycles[c0].size();
-    t0 = interpHue(hue_cycles[c0][x0], hue_cycles[c0][x1], t0 - x0);
-    
-    float t1 = hue_cycles[c1].size() * (i % periods[c1]) / (float)periods[c1];
-    int y0 = (int)t1;
-    int y1 = (y0 + 1) % hue_cycles[c1].size();
-    t1 = interpHue(hue_cycles[c1][y0], hue_cycles[c1][y1], t1 - y0);
-
-    th0 = interpHue(t0, t1, th0 - c0);
-
     float ts = sats.size() * (i % sat_period) / (float)sat_period;
     int s0 = (int)ts;
     int s1 = (s0 + 1) % sats.size();
@@ -282,8 +272,28 @@ CachedPalette getMultiWave(int N) {
     for (int j = 0; j < lums.size(); j++)
       tl += lums[j] * sin(i * 2.0 * 3.14159265358979 / lum_periods[j]);
     tl = 1.0 / (1.0 + exp(-tl));
+
+    float th0 = hue_cycles.size() * (i % long_period) / (float)long_period;
+    int c0 = (int)th0;
+    int c1 = (c0 + 1) % hue_cycles.size();
+
+    float t0 = hue_cycles[c0].size() * (i % periods[c0]) / (float)periods[c0];
+    int x0 = (int)t0;
+    int x1 = (x0 + 1) % hue_cycles[c0].size();
+    Color cx0, cx1, cx;
+    hsl2rgb(hue_cycles[c0][x0], ts, tl, cx0.r, cx0.g, cx0.b);
+    hsl2rgb(hue_cycles[c0][x1], ts, tl, cx1.r, cx1.g, cx1.b);
+    cx = interp(cx0, cx1, t0 - x0);
     
-    hsl2rgb(th0, ts, tl, pal[i].r, pal[i].g, pal[i].b);
+    float t1 = hue_cycles[c1].size() * (i % periods[c1]) / (float)periods[c1];
+    int y0 = (int)t1;
+    int y1 = (y0 + 1) % hue_cycles[c1].size();
+    Color cy0, cy1, cy;
+    hsl2rgb(hue_cycles[c1][y0], ts, tl, cy0.r, cy0.g, cy0.b);
+    hsl2rgb(hue_cycles[c1][y1], ts, tl, cy1.r, cy1.g, cy1.b);
+    cy = interp(cy0, cy1, t1 - y0);
+
+    pal[i] = interp(cx, cy, th0 - c0);
   }
   
   return pal;
@@ -499,11 +509,7 @@ protected:
 	}
 
 	if (its < N) {
-	  if (smoothflag) {
-	    color.r = interp(pal[its - 1].r, pal[its].r, smoothing);
-	    color.g = interp(pal[its - 1].g, pal[its].g, smoothing);
-	    color.b = interp(pal[its - 1].b, pal[its].b, smoothing);
-	  }
+	  if (smoothflag) color = interp(pal[its - 1], pal[its], smoothing);
 	  else color = pal[its];
 	}
 	else
