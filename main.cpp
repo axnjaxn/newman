@@ -44,8 +44,16 @@ LPComplex descend(const HPComplex& a) {
   return b;
 }
 
+constexpr double bailout = 1024.0;
+constexpr double bailout2 = bailout * bailout;
+
 inline bool bailedOut(HPComplex& z) {
-  return sqMag(descend(z)) > 4.0;
+  return sqMag(descend(z)) > bailout2;
+}
+
+double getSmoothingMagnitude(const LPComplex& z) {
+  double r2 = sqMag(z);
+  return 1.0 - log2(0.5 * log(r2) / log(bailout));
 }
 
 void getRefOrbit(std::vector<HPComplex>& X, const HPComplex& X0) {
@@ -92,7 +100,8 @@ bool isUnstable(const LPComplex& bterm, const LPComplex& cterm) {
 
 int getIterations(const std::vector<HPComplex>& X,
 		  const std::vector<HPComplex>& A, const std::vector<HPComplex>& B, const std::vector<HPComplex>& C,
-		  const HPComplex& ref, const HPComplex& Y0, int N) {
+		  const HPComplex& ref, const HPComplex& Y0, int N,
+		  double& smoothing) {
   LPComplex eps, eps2, eps3, a, b, c;
   HPComplex Y;
   Y.re = Y0.re - ref.re;
@@ -134,7 +143,10 @@ int getIterations(const std::vector<HPComplex>& X,
     
     mid = (low + high) / 2;
   }
-  if (found < d.size()) return found;
+  if (found < d.size()) {
+    smoothing = getSmoothingMagnitude(d[found]);
+    return found;
+  }
   
   HPComplex Yn;
   Y.re = Yn.re = X[d.size() - 1].re + d[d.size() - 1].re;
@@ -143,7 +155,10 @@ int getIterations(const std::vector<HPComplex>& X,
     Yn.re = Y.re * Y.re - Y.im * Y.im + Y0.re;
     Yn.im = 2.0 * (Y.re * Y.im) + Y0.im;
 
-    if (bailedOut(Yn)) return i;
+    if (bailedOut(Yn)) {
+      smoothing = getSmoothingMagnitude(descend(Yn));
+      return i;
+    }
 
     Y.re = Yn.re;
     Y.im = Yn.im;      
@@ -381,11 +396,6 @@ protected:
     Display::handleEvent(event);
   }
 
-  Color getColor(int its) {
-    if (its == N) return Color(0);
-    return pal[its];
-  }
-
   bool drawLine() {
     if (osd.shouldDraw()) {
       canvas = img;
@@ -459,7 +469,8 @@ protected:
     }
     
     if (drawlines) img = canvas;
-    
+
+    double smoothing;
     for (int r = 0, i = 0; r < img.nr; r++) {
       for (int c = 0; c < img.nc; c++, i++) {
 	pt.re = corner.re + c * sz.re;
@@ -470,14 +481,23 @@ protected:
 	  Z.im = Z0.im = pt.im.get_d();
 	  for (its = 0; its < N; its++) {
 	    Z = sq(Z) + Z0;
-	    if (sqMag(Z) > 4.0) break;
+	    if (sqMag(Z) > bailout2) break;
 	  }
+	  if (its < N)
+	    smoothing = getSmoothingMagnitude(Z);
 	}
 	else {
-	  its = getIterations(X, A, B, C, ref, pt, N);
+	  its = getIterations(X, A, B, C, ref, pt, N, smoothing);
 	}
-	
-	color = getColor(its);
+
+	if (its < N) {
+	  color.r = interp(pal[its - 1].r, pal[its].r, smoothing);
+	  color.g = interp(pal[its - 1].g, pal[its].g, smoothing);
+	  color.b = interp(pal[its - 1].b, pal[its].b, smoothing);
+	}
+	else
+	  color = Color(0);
+
 	Rp[i] = color.r; Gp[i] = color.g; Bp[i] = color.b;
       }
 
@@ -549,7 +569,7 @@ protected:
 	  Color(192, 64, 0), Color(32, 32, 160), Color(160, 192, 32), Color(255, 32, 192), Color(64, 0, 192),
 	  Color(32, 128, 192), Color(32, 0, 255), Color(160, 32, 96), Color(255, 160, 64)});
     int palN = (src.levels() - 1) * 256;
-    pal = LinearPalette(src).cache(palN);    
+    pal = LinearPalette(src).cache(palN);
   }
 
   void constructNewPalette() {
