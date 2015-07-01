@@ -569,8 +569,7 @@ protected:
   void reset() {
     constructDefaultPalette();
     
-    renderflag = redrawflag = drawlines = true;
-    smoothflag = false;
+    renderflag = redrawflag = drawlines = smoothflag = true;
 
     N = 256;
     
