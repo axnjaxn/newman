@@ -1,48 +1,8 @@
+#include "complex.h"
 #include "multiwave.h"
 #include <byteimage/osd.h>
-#include <gmpxx.h>
 
 using namespace byteimage;
-
-typedef struct {
-  mpf_class re, im;
-} HPComplex;
-
-typedef struct {
-  double re, im;
-} LPComplex;
-
-LPComplex sq(const LPComplex& a) {
-  LPComplex c;
-  c.re = a.re * a.re - a.im * a.im;
-  c.im = 2 * a.re * a.im;
-  return c;
-}
-
-LPComplex operator+(const LPComplex& a, const LPComplex& b) {
-  LPComplex c;
-  c.re = a.re + b.re;
-  c.im = a.im + b.im;
-  return c;
-}
-
-LPComplex operator*(const LPComplex& a, const LPComplex& b) {
-  LPComplex c;
-  c.re = a.re * b.re - a.im * b.im;
-  c.im = a.re * b.im + a.im * b.re;
-  return c;
-}
-
-double sqMag(const LPComplex& a) {
-  return a.re * a.re + a.im * a.im;
-}
-
-LPComplex descend(const HPComplex& a) {
-  LPComplex b;
-  b.re = a.re.get_d();
-  b.im = a.im.get_d();
-  return b;
-}
 
 constexpr double bailout = 1024.0;
 constexpr double bailout2 = bailout * bailout;
