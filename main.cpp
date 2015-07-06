@@ -1,5 +1,5 @@
+#include "multiwave.h"
 #include <byteimage/osd.h>
-#include <byteimage/palette.h>
 #include <gmpxx.h>
 
 using namespace byteimage;
@@ -200,104 +200,7 @@ void blitSampled(ByteImage& target, const ByteImage& src, float sx, float sy, in
     }      
 }
 
-float interpHue(float f1, float f2, float t) {
-  float diff = f2 - f1;
-  if (diff > 180.0) diff = diff - 360.0;
-  else if (diff <= -180.0) diff = diff + 360.0;
-  f2 = f1 + t * diff;
-  if (f2 < 0.0) return f2 + 360.0;
-  else if (f2 >= 360.0) return f2 - 360.0;
-  else return f2;
-}
-
-Color interp(const Color& c1, const Color& c2, float t) {
-  return Color(interp(c1.r, c2.r, t),
-	       interp(c1.g, c2.g, t),
-	       interp(c1.b, c2.b, t));	       
-}
-
-CachedPalette getMultiWave(int N) {
-  FILE* fp = fopen("palette.pal", "r");
-  
-  int nhuecycles;
-  fscanf(fp, "%d", &nhuecycles);
-
-  std::vector< std::vector<float> > hue_cycles;
-  std::vector<int> periods(nhuecycles);
-  for (int i = 0; i < nhuecycles; i++) {
-    int nhues;
-    fscanf(fp, "%d", &nhues);
-
-    std::vector<float> cycle(nhues);
-    for (int j = 0; j < cycle.size(); j++)
-      fscanf(fp, "%f", &cycle[j]);
-    hue_cycles.push_back(cycle);
-    
-    fscanf(fp, "%d", &periods[i]);
-  }
-
-  int long_period;
-  fscanf(fp, "%d", &long_period);
-
-  int nsats;
-  fscanf(fp, "%d", &nsats);
-  std::vector<float> sats(nsats);
-  for (int i = 0; i < sats.size(); i++)
-    fscanf(fp, "%f", &sats[i]);
-
-  int sat_period;
-  fscanf(fp, "%d", &sat_period);
-
-  int nlums;
-  fscanf(fp, "%d", &nlums);
-  std::vector<float> lums(nlums);
-  std::vector<int> lum_periods(nlums);
-  for (int i = 0; i < lums.size(); i++) {
-    fscanf(fp, "%f", &lums[i]);
-    fscanf(fp, "%d", &lum_periods[i]);
-  }
-    
-  fclose(fp);
-
-  CachedPalette pal(N);
-
-  for (int i = 0; i < N; i++) {
-    float ts = sats.size() * (i % sat_period) / (float)sat_period;
-    int s0 = (int)ts;
-    int s1 = (s0 + 1) % sats.size();
-    ts -= s0;
-    ts = (1.0 - ts) * sats[s0] + ts * sats[s1];
-
-    float tl = 0.0;
-    for (int j = 0; j < lums.size(); j++)
-      tl += lums[j] * sin(i * 2.0 * 3.14159265358979 / lum_periods[j]);
-    tl = 1.0 / (1.0 + exp(-tl));
-
-    float th0 = hue_cycles.size() * (i % long_period) / (float)long_period;
-    int c0 = (int)th0;
-    int c1 = (c0 + 1) % hue_cycles.size();
-
-    float t0 = hue_cycles[c0].size() * (i % periods[c0]) / (float)periods[c0];
-    int x0 = (int)t0;
-    int x1 = (x0 + 1) % hue_cycles[c0].size();
-    Color cx0, cx1, cx;
-    hsl2rgb(hue_cycles[c0][x0], ts, tl, cx0.r, cx0.g, cx0.b);
-    hsl2rgb(hue_cycles[c0][x1], ts, tl, cx1.r, cx1.g, cx1.b);
-    cx = interp(cx0, cx1, t0 - x0);
-    
-    float t1 = hue_cycles[c1].size() * (i % periods[c1]) / (float)periods[c1];
-    int y0 = (int)t1;
-    int y1 = (y0 + 1) % hue_cycles[c1].size();
-    Color cy0, cy1, cy;
-    hsl2rgb(hue_cycles[c1][y0], ts, tl, cy0.r, cy0.g, cy0.b);
-    hsl2rgb(hue_cycles[c1][y1], ts, tl, cy1.r, cy1.g, cy1.b);
-    cy = interp(cy0, cy1, t1 - y0);
-
-    pal[i] = interp(cx, cy, th0 - c0);
-  }
-  
-  return pal;
-}
+extern Color interp(const Color&, const Color&, float);
 
 class MyDisplay : public Display {
 protected:
@@ -590,7 +493,9 @@ protected:
   }
 
   void constructNewPalette() {
-    pal = getMultiWave(N);
+    MultiWaveGenerator mw;
+    mw.load_filename("palette.pal");
+    pal = mw.cache(N);
   }
   
   void save() {
