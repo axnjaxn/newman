@@ -72,12 +72,6 @@ void MultiWaveGenerator::save_filename(const char* fn) const {
   fclose(fp);
 }
 
-Color interp(const Color& c1, const Color& c2, float t) {
-  return Color(interp(c1.r, c2.r, t),
-	       interp(c1.g, c2.g, t),
-	       interp(c1.b, c2.b, t));	       
-}
-
 CachedPalette MultiWaveGenerator::cache(int N) const {
   CachedPalette pal(N);
 

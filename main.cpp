@@ -200,8 +200,6 @@ void blitSampled(ByteImage& target, const ByteImage& src, float sx, float sy, in
     }      
 }
 
-extern Color interp(const Color&, const Color&, float);
-
 class MyDisplay : public Display {
 protected:
   ByteImage canvas, img;
