@@ -127,39 +127,6 @@ int getIterations(const std::vector<HPComplex>& X,
   return N;
 }
 
-void blitSampled(ByteImage& target, const ByteImage& src, float sx, float sy, int dr, int dc) {
-  if (target.nchannels == 1 && src.nchannels == 3) {
-    blitSampled(target, src.toGrayscale(), sx, sy, dr, dc);
-    return;
-  }
-  else if (target.nchannels == 3 && src.nchannels == 1) {
-    blitSampled(target, src.toColor(), sx, sy, dr, dc);
-    return;
-  }
-  
-  int r0 = dr;
-  int c0 = dc;
-
-  int r1 = (int)(dr + sy * (src.nr - 1));
-  int c1 = (int)(dc + sx * (src.nc - 1));
-
-  if (r0 < 0) r0 = 0;
-  if (c0 < 0) c0 = 0;
-  if (r1 >= target.nr) r1 = target.nr - 1;
-  if (c1 >= target.nc) c1 = target.nc - 1;
-
-  for (int r = r0, sr, sc; r <= r1; r++)
-    for (int c = c0; c <= c1; c++) {
-      sr = (int)((r - dr) / sy);
-      sc = (int)((c - dc) / sx);
-      target.at(r, c, 0) = src.at(sr, sc, 0);
-      if (target.nchannels == 3) {
-	target.at(r, c, 1) = src.at(sr, sc, 1);
-	target.at(r, c, 2) = src.at(sr, sc, 2);
-      }
-    }      
-}
-
 class MyDisplay : public Display {
 protected:
   ByteImage canvas, img;
@@ -406,7 +373,7 @@ protected:
     if (redrawflag) {
       if (mousedown == 1){
 	canvas.fill(255);
-	blitSampled(canvas, img, scale, scale, my - scale * my, mx - scale * mx);
+	canvas.blitSampled(img, scale, scale, my - scale * my, mx - scale * mx);
       }
       else if (mousedown == 2) {
 	canvas.fill(255);
