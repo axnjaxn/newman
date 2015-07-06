@@ -183,7 +183,8 @@ protected:
 	break;
       case SDLK_DOWN:
 	if (N > 256) N -= 256;
-	renderflag = true;
+	recolor();
+	redrawflag = true;
 	osd.print(OSD_Printer::string("%d iterations", N));
 	break;
       case SDLK_F2: save(); break;
@@ -204,9 +205,13 @@ protected:
       case SDLK_i:
 	osd.hide();
 	if (scanner.getInt(canvas, "How many iterations?", n)) {
+	  if (n > N) renderflag = true;
+	  else {
+	    recolor();
+	    redrawflag = true;
+	  }
 	  N = n;
 	  osd.print(OSD_Printer::string("%d iterations.", N));
-	  renderflag = true;
 	}
 	break;
       }
