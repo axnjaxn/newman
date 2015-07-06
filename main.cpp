@@ -61,7 +61,7 @@ bool isUnstable(const LPComplex& bterm, const LPComplex& cterm) {
 int getIterations(const std::vector<HPComplex>& X,
 		  const std::vector<HPComplex>& A, const std::vector<HPComplex>& B, const std::vector<HPComplex>& C,
 		  const HPComplex& ref, const HPComplex& Y0, int N,
-		  double& smoothing) {
+		  float& smoothing) {
   LPComplex eps, eps2, eps3, a, b, c;
   HPComplex Y;
   Y.re = Y0.re - ref.re;
@@ -127,6 +127,27 @@ int getIterations(const std::vector<HPComplex>& X,
   return N;
 }
 
+class RenderGrid {
+public:
+  class EscapeValue {
+  public:
+    int iterations;
+    float smoothing;
+
+    EscapeValue(int iterations = 0, float smoothing = 0.0)
+      : iterations(iterations), smoothing(smoothing) { }
+  };
+
+  int nr, nc;
+  std::vector<EscapeValue> values;
+
+  RenderGrid() : nr(0), nc(0) { }
+  RenderGrid(int nr, int nc) : nr(nr), nc(nc), values(nr * nc) { }
+
+  EscapeValue& at(int r, int c) {return values[r * nc + c];}
+  const EscapeValue& at(int r, int c) const {return values[r * nc + c];}
+};
+
 class MyDisplay : public Display {
 protected:
   ByteImage canvas, img;
@@ -137,6 +158,7 @@ protected:
   int N;
   int mousedown, mx, my, nx, ny;
   float scale;
+  RenderGrid grid;
   CachedPalette pal;
 
   void screenshot() {
@@ -166,7 +188,7 @@ protected:
 	break;
       case SDLK_F2: save(); break;
       case SDLK_F3: constructDefaultPalette(); load(); break;
-      case SDLK_p: constructNewPalette(); renderflag = true; break;
+      case SDLK_p: constructNewPalette(); recolor(); redrawflag = true; break;
       case SDLK_F11: screenshot(); break;
       case SDLK_s:
 	osd.hide();
@@ -242,7 +264,32 @@ protected:
     Display::handleEvent(event);
   }
 
-  bool drawLine() {
+  void colorLine(int r) {
+    Color color;
+    for (int c = 0; c < img.nc; c++) {
+      if (grid.at(r, c).iterations < N) {
+	if (smoothflag)
+	  color = interp(pal[grid.at(r, c).iterations - 1],
+			 pal[grid.at(r, c).iterations],
+			 grid.at(r, c).smoothing);
+	else
+	  color = pal[grid.at(r, c).iterations];
+      }
+      else color = Color(0);
+      
+      img.at(r, c, 0) = color.r;
+      img.at(r, c, 1) = color.g;
+      img.at(r, c, 2) = color.b;
+    }
+  }
+  void recolor() {
+    for (int r = 0; r < img.nr; r++)
+      colorLine(r);
+  }
+  
+  bool drawLine(int r) {
+    colorLine(r);
+    
     if (osd.shouldDraw()) {
       canvas = img;
       osd.draw(canvas);
@@ -275,8 +322,6 @@ protected:
     //Both HW and Arb
     HPComplex pt;
     int its;
-    Color color;
-    Byte *Rp = img.R(), *Gp = img.G(), *Bp = img.B();
 
     //HW
     LPComplex Z, Z0;
@@ -316,7 +361,6 @@ protected:
     
     if (drawlines) img = canvas;
 
-    double smoothing;
     for (int r = 0, i = 0; r < img.nr; r++) {
       for (int c = 0; c < img.nc; c++, i++) {
 	pt.re = corner.re + c * sz.re;
@@ -329,24 +373,21 @@ protected:
 	    Z = sq(Z) + Z0;
 	    if (sqMag(Z) > bailout2) break;
 	  }
-	  if (its < N)
-	    smoothing = getSmoothingMagnitude(Z);
+	  if (its < N) {
+	    grid.at(r, c).iterations = its;
+	    grid.at(r, c).smoothing = getSmoothingMagnitude(Z);
+	  }
+	  else {
+	    grid.at(r, c).iterations = N;
+	    grid.at(r, c).smoothing = 0.0;
+	  }
 	}
 	else {
-	  its = getIterations(X, A, B, C, ref, pt, N, smoothing);
+	  grid.at(r, c).iterations = getIterations(X, A, B, C, ref, pt, N, grid.at(r, c).smoothing);
 	}
-
-	if (its < N) {
-	  if (smoothflag) color = interp(pal[its - 1], pal[its], smoothing);
-	  else color = pal[its];
-	}
-	else
-	  color = Color(0);
-
-	Rp[i] = color.r; Gp[i] = color.g; Bp[i] = color.b;
       }
 
-      if (drawlines && drawLine()) break;
+      if (drawlines && drawLine(r)) break;
     }
 
     redrawflag = true;
@@ -482,7 +523,7 @@ protected:
   }
   
 public:
-  MyDisplay(int h, int w) : Display(h, w), img(h, w, 3), canvas(h, w) {
+  MyDisplay(int h, int w) : Display(h, w), img(h, w, 3), canvas(h, w), grid(h, w) {
     for (int r = 0; r < h; r++)
       for (int c = 0; c < w; c++)
 	canvas.at(r, c) = (((r / 4) + (c / 4)) & 1)? 255 : 192;
