@@ -186,16 +186,23 @@ public:
 void Editor::resetMW() {
   mw = MultiWaveGenerator();
   mw.load_filename("palette.pal");//del
-
+  filename = "palette.pal";
   //TODO
 
   updateWidgets();
 }
 
+void Editor::commit() {
+  mw.save_filename(filename.c_str());
+  osd.print("Committed changes.");
+}
+
 void Editor::load() {
   std::string fn;
-  if (scanner.getString(canvas, "Enter a filename to load:", fn))
+  if (scanner.getString(canvas, "Enter a filename to load:", fn)) {
+    filename = fn;
     mw.load_filename(fn.c_str());
+  }
 
   updateWidgets();
 }
@@ -245,6 +252,7 @@ void Editor::handleEvent(SDL_Event event) {
     switch (event.key.keysym.sym) {
     case SDLK_F2: save(); break;
     case SDLK_F3: load(); break;
+    case SDLK_RETURN: commit(); break;      
     }
   WidgetDisplay::handleEvent(event);
 }

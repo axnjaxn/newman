@@ -13,11 +13,13 @@ using byteimage::OSD_Scanner;
 
 class Editor : public WidgetDisplay {
 protected:
+  std::string filename;
   TextRenderer* font;
   OSD_Printer osd;
   OSD_Scanner scanner;
   
   void resetMW();
+  void commit();
   void load();
   void save();
 
