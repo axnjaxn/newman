@@ -188,9 +188,8 @@ public:
 
 void Editor::resetMW() {
   mw = MultiWaveGenerator();
-  mw.load_filename("palette.pal");//del
-  filename = "palette.pal";
-  //TODO
+  mw.load_filename("default.pal");
+  filename = "default.pal";
 
   updateWidgets();
 }

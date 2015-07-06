@@ -465,7 +465,7 @@ protected:
 
   void constructNewPalette() {
     MultiWaveGenerator mw;
-    mw.load_filename("palette.pal");
+    mw.load_filename("default.pal");
     pal = mw.cache(N);
   }
   
