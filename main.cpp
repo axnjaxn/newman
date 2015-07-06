@@ -154,11 +154,15 @@ protected:
   OSD_Printer osd;
   OSD_Scanner scanner;
   bool renderflag, redrawflag, drawlines, smoothflag;
+
   HPComplex corner, sz;
   int N;
+
   int mousedown, mx, my, nx, ny;
   float scale;
+  
   RenderGrid grid;
+  MultiWaveGenerator mw;
   CachedPalette pal;
 
   void screenshot() {
@@ -178,6 +182,7 @@ protected:
       case SDLK_RETURN: renderflag = true; break;
       case SDLK_UP:
 	N += 256;
+	pal = mw.cache(N);
 	renderflag = true;
 	osd.print(OSD_Printer::string("%d iterations", N));
 	break;
@@ -189,7 +194,11 @@ protected:
 	break;
       case SDLK_F2: save(); break;
       case SDLK_F3: constructDefaultPalette(); load(); break;
-      case SDLK_p: constructNewPalette(); recolor(); redrawflag = true; break;
+      case SDLK_p://TODO: Open editor
+	constructDefaultPalette();
+	recolor();
+	redrawflag = true;
+	break;
       case SDLK_F11: screenshot(); break;
       case SDLK_s:
 	osd.hide();
@@ -205,7 +214,10 @@ protected:
       case SDLK_i:
 	osd.hide();
 	if (scanner.getInt(canvas, "How many iterations?", n)) {
-	  if (n > N) renderflag = true;
+	  if (n > N) {
+	    pal = mw.cache(n);
+	    renderflag = true;
+	  }
 	  else {
 	    recolor();
 	    redrawflag = true;
@@ -440,12 +452,11 @@ protected:
     Display::update();
   }
 
-  void reset() {
-    constructDefaultPalette();
-    
+  void reset() {    
     renderflag = redrawflag = drawlines = smoothflag = true;
 
     N = 256;
+    constructDefaultPalette();
     
     corner.re = -2.5;
     corner.im = -1.5;
@@ -455,16 +466,6 @@ protected:
   }
 
   void constructDefaultPalette() {
-    CachedPalette src = CachedPalette::fromColors({Color(255), Color(255, 64, 0), Color(0, 64, 255), Color(128, 255, 64), Color(255, 255, 0), Color(0, 0, 255),
-	  Color(128, 128, 192), Color(255, 0, 255), Color(255, 192, 192), Color(128, 160, 64),
-	  Color(192, 64, 0), Color(32, 32, 160), Color(160, 192, 32), Color(255, 32, 192), Color(64, 0, 192),
-	  Color(32, 128, 192), Color(32, 0, 255), Color(160, 32, 96), Color(255, 160, 64)});
-    int palN = (src.levels() - 1) * 256;
-    pal = LinearPalette(src).cache(palN);
-  }
-
-  void constructNewPalette() {
-    MultiWaveGenerator mw;
     mw.load_filename("default.pal");
     pal = mw.cache(N);
   }
@@ -518,6 +519,8 @@ protected:
 
       corner.re = center.re - (img.nc / 2) * sz.re;
       corner.im = center.im - (img.nr / 2) * sz.im;
+
+      pal = mw.cache(N);
       
       renderflag = true;
       osd.print("Loaded from " + fn);
