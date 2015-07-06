@@ -11,6 +11,8 @@ using byteimage::TextRenderer;
 using byteimage::OSD_Printer;
 using byteimage::OSD_Scanner;
 
+class Button;//Fwd. Decl.
+
 class Editor : public WidgetDisplay {
 protected:
   std::string filename;
@@ -38,25 +40,24 @@ public:
   
   void deleteCycle(int index);
   void addCycle(int index);
-  void changeCyclePeriod();//TODO
+  void changeCyclePeriod(Button* button);
   
-  void changeHue(int index, int hue_index);
-  void changeHuePeriod(int index);
+  void changeHue(Button* button, int index, int hue_index);
+  void changeHuePeriod(Button* button, int index);
   void deleteHue(int index);
   void addHue(int index);
 
-  void changeSat(int sat_index);
-  void changeSatPeriod();
+  void changeSat(Button* button, int sat_index);
+  void changeSatPeriod(Button* button);
   void deleteSat();
   void addSat();
   
-  void changeLum(int lum_index);
-  void changeLumPeriod(int lum_index);
+  void changeLum(Button* button, int lum_index);
+  void changeLumPeriod(Button* button, int lum_index);
   void deleteLum();
   void addLum();
 
   //TODO: Better hue, sat, lum editors
-  //TODO: Finish numerical editors
 };
 
 #endif

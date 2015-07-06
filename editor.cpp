@@ -71,14 +71,14 @@ WidgetLayout* HueCyclePreview(Editor* editor, int index) {
   button = new Button(editor);
   button->bg = Color(0); button->fg = Color(255);
   button->text = OSD_Printer::string("%d", cycle.period);
-  button->fn = [editor, index]() {editor->changeHuePeriod(index);};
+  button->fn = [editor, button, index]() {editor->changeHuePeriod(button, index);};
   layout->attach(button, pos, 0, h * 2, h);
   pos += h * 2;
   
   for (int i = 0; i < cycle.values.size(); i++) {
     button = new Button(editor);
     button->bg = getHue(cycle.values[i]);
-    button->fn = [editor, index, i]() {editor->changeHue(index, i);};
+    button->fn = [editor, button, index, i]() {editor->changeHue(button, index, i);};
     layout->attach(button, pos, 0, h, h);
     pos += h;
   }
@@ -113,7 +113,7 @@ WidgetLayout* SatCyclePreview(Editor* editor) {
   for (int i = 0; i < cycle.values.size(); i++) {
     button = new Button(editor);
     button->bg = getSat(cycle.values[i]);
-    button->fn = [editor, i]() {editor->changeSat(i);};
+    button->fn = [editor, button, i]() {editor->changeSat(button, i);};
     layout->attach(button, pos, 0, h, h);
     pos += h;
   }
@@ -142,32 +142,35 @@ WidgetLayout* LumWavesPreview(Editor* editor) {
   auto& waves = editor->mw.lum_waves;
   Button* button;
   int hue_index = 0;
-  int pos = 0;
   int h = 32;  
 
   for (int i = 0; i < waves.size(); i++) {
     button = new Button(editor);
     button->bg = getLum(waves[i].amplitude);
-    button->fn = [editor, i]() {editor->changeLum(i);};
-    layout->attach(button, pos, 0, h, h);
-    pos += h;   
+    button->fn = [editor, button, i]() {editor->changeLum(button, i);};
+    layout->attach(button, 0, i * h, h, h);
+
+    button = new Button(editor);
+    button->bg = Color(0);
+    button->fg = Color(255);
+    button->text = OSD_Printer::string("%d", waves[i].period);
+    button->fn = [editor, button, i]() {editor->changeLumPeriod(button, i);};
+    layout->attach(button, h, i * h, 2 * h, h);
   }
 
   button = new Button(editor);
   button->bg = Color(128); button->fg = Color(0);
   button->drawMinus = true;
   button->fn = [editor]() {editor->deleteLum();};
-  layout->attach(button, pos, 0, h, h);
-  pos += h;
+  layout->attach(button, 0, waves.size() * h, h, h);
 
   button = new Button(editor);
   button->bg = Color(192); button->fg = Color(0);
   button->drawPlus = true;
   button->fn = [editor]() {editor->addLum();};
-  layout->attach(button, pos, 0, h, h);
-  pos += h;
+  layout->attach(button, h, waves.size() * h, h, h);
 
-  layout->updateSize(pos, h);
+  layout->updateSize(3 * h, (waves.size() + 1) * h);
 
   return layout;
 }
@@ -216,6 +219,7 @@ void Editor::save() {
 void Editor::updateWidgets() {
   layout.clear();
 
+  Button* button;
   int pos = 0;
   
   for (int i = 0; i < mw.hue_cycles.size(); i++) {
@@ -224,6 +228,13 @@ void Editor::updateWidgets() {
     pos += 32;
   }
 
+  button = new Button(this);
+  button->bg = Color(0); button->fg = Color(255);
+  button->text = OSD_Printer::string("%d", mw.hue_period);
+  button->fn = [this, button]() {this->changeCyclePeriod(button);};
+  layout.attach(button, 0, pos, 64, 32);
+  pos += 32;
+
   pos += 16;
 
   {
@@ -231,16 +242,20 @@ void Editor::updateWidgets() {
     this->layout.attach(layout, 0, pos, layout->width(), layout->height());
     pos += 32;
   }
+
+  button = new Button(this);
+  button->bg = Color(0); button->fg = Color(255);
+  button->text = OSD_Printer::string("%d", mw.sat_cycle.period);
+  button->fn = [this, button]() {this->changeSatPeriod(button);};
+  layout.attach(button, 0, pos, 64, 32);
+  pos += 32;
   
   pos += 16;
 
   {
     WidgetLayout* layout = LumWavesPreview(this);
     this->layout.attach(layout, 0, pos, layout->width(), layout->height());
-    pos += 32;
   }
-
-  pos += 16;
   
   layout.attach(new MWPreview(this), 0, canvas.nr - 20, canvas.nc, 20);
 
@@ -273,6 +288,8 @@ Editor::Editor() : WidgetDisplay(600, 800) {
   osd.setColors(Color(255), Color(0));
   scanner.setColors(Color(255), Color(0));
   scanner.setDisplay(this);
+
+  frameDelay = 25;
   
   resetMW();
 }
@@ -299,24 +316,30 @@ void Editor::addCycle(int index) {
   updateWidgets();
 }
 
-void Editor::changeHue(int index, int hue_index) {
+void Editor::changeCyclePeriod(Button* button) {
+  int period;
+  if (scanner.getInt(canvas, "Enter the number of iterations:", period)) {
+    mw.hue_period = period;
+    button->text = OSD_Printer::string("%d", period);
+  }
+
+  renderflag = true;
+}
+
+void Editor::changeHue(Button* button, int index, int hue_index) {
   float hue;
   if (scanner.getFloat(canvas, "Enter a hue:", hue)) {
     mw.hue_cycles[index].values[hue_index] = hue;
-    WidgetLayout* layout = (WidgetLayout*)this->layout.widgets[index].widget;
-    Button* button = (Button*)layout->widgets[hue_index + 3].widget;
     button->bg = getHue(hue);
   }
 
   renderflag = true;  
 }
 
-void Editor::changeHuePeriod(int index) {
+void Editor::changeHuePeriod(Button* button, int index) {
   int period;
   if (scanner.getInt(canvas, "Enter the number of iterations:", period)) {
     mw.hue_cycles[index].period = period;
-    WidgetLayout* layout = (WidgetLayout*)this->layout.widgets[index].widget;
-    Button* button = (Button*)layout->widgets[2].widget;
     button->text = OSD_Printer::string("%d", period);
   }
 
@@ -335,27 +358,21 @@ void Editor::addHue(int index) {
   updateWidgets();
 }
 
-void Editor::changeSat(int sat_index) {
+void Editor::changeSat(Button* button, int sat_index) {
   float sat;
   if (scanner.getFloat(canvas, "Enter a saturation:", sat)) {
     mw.sat_cycle.values[sat_index] = sat;
-    WidgetLayout* layout = (WidgetLayout*)this->layout.widgets[mw.hue_cycles.size()].widget;
-    Button* button = (Button*)layout->widgets[sat_index].widget;
     button->bg = getSat(sat);
   }
 
   renderflag = true;
 }
 
-void Editor::changeSatPeriod() {
+void Editor::changeSatPeriod(Button* button) {
   int period;
   if (scanner.getInt(canvas, "Enter the number of iterations:", period)) {
     mw.sat_cycle.period = period;
-    /*
-    WidgetLayout* layout = (WidgetLayout*)this->layout.widgets[index].widget;
-    Button* button = (Button*)layout->widgets[2].widget;
     button->text = OSD_Printer::string("%d", period);
-    */
   }
 
   renderflag = true;
@@ -365,35 +382,29 @@ void Editor::deleteSat() {
   if (mw.sat_cycle.values.size() <= 1) return;
 
   mw.sat_cycle.values.pop_back();
-  renderflag = true;
+  updateWidgets();
 }
 
 void Editor::addSat() {
   mw.sat_cycle.values.push_back(mw.sat_cycle.values[mw.sat_cycle.values.size() - 1]);
-  renderflag = true;
+  updateWidgets();
 }
 
-void Editor::changeLum(int lum_index) {
+void Editor::changeLum(Button* button, int lum_index) {
   float lum;
   if (scanner.getFloat(canvas, "Enter a luminance:", lum)) {
     mw.lum_waves[lum_index].amplitude = lum; 
-    WidgetLayout* layout = (WidgetLayout*)this->layout.widgets[mw.hue_cycles.size() + 1].widget;
-    Button* button = (Button*)layout->widgets[lum_index].widget;
     button->bg = getLum(lum);
   }
 
   renderflag = true;
 }
 
-void Editor::changeLumPeriod(int lum_index) {
+void Editor::changeLumPeriod(Button* button, int lum_index) {
   int period;
   if (scanner.getInt(canvas, "Enter the number of iterations:", period)) {
     mw.lum_waves[lum_index].period = period;
-    /*
-    WidgetLayout* layout = (WidgetLayout*)this->layout.widgets[index].widget;
-    Button* button = (Button*)layout->widgets[2].widget;
     button->text = OSD_Printer::string("%d", period);
-    */
   }
 
   renderflag = true;
