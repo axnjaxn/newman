@@ -62,8 +62,6 @@ public:
 
   void openSlider(Slider* slider);
   void closeSlider();
-
-  //TODO: Better hue, sat, lum editors
 };
 
 #endif

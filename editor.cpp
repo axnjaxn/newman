@@ -50,8 +50,8 @@ public:
   virtual void handleEvent(SDL_Event event) {
     int x;
 
-    if (event.type == SDL_MOUSEBUTTONDOWN) x = event.button.x;
-    else if (event.type == SDL_MOUSEMOTION) x = event.motion.x;
+    if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) x = event.button.x;
+    else if (event.type == SDL_MOUSEMOTION && (event.motion.state & SDL_BUTTON_LMASK)) x = event.motion.x;
     else return;
     
     value = (float)x / (w - 1);
@@ -224,7 +224,7 @@ void Editor::resetMW() {
   mw.load_filename("default.pal");
   filename = "default.pal";
 
-  updateWidgets();
+  closeSlider();
 }
 
 void Editor::commit() {
@@ -239,7 +239,7 @@ void Editor::load() {
     mw.load_filename(fn.c_str());
   }
 
-  updateWidgets();
+  closeSlider();
 }
   
 void Editor::save() {
@@ -288,10 +288,13 @@ void Editor::updateWidgets() {
     WidgetLayout* layout = LumWavesPreview(this);
     this->layout.attach(layout, 0, pos, layout->width(), layout->height());
   }
+
+  if (slider)
+    layout.attach(slider, 0, canvas.nr - 52, canvas.nc, 32, false);
   
   layout.attach(new MWPreview(this), 0, canvas.nr - 20, canvas.nc, 20);
 
-  renderflag = true;
+  setRenderFlag();
 }
 
 void Editor::handleEvent(SDL_Event event) {
@@ -337,7 +340,7 @@ void Editor::deleteCycle(int index) {
   if (mw.hue_cycles.size() <= 1) return;
 
   mw.hue_cycles.erase(mw.hue_cycles.begin() + index);
-  updateWidgets();
+  closeSlider();
 }
 
 void Editor::addCycle(int index) {
@@ -348,7 +351,7 @@ void Editor::addCycle(int index) {
   cycle.period = 256;
   
   mw.hue_cycles.insert(mw.hue_cycles.begin() + index + 1, cycle);
-  updateWidgets();
+  closeSlider();
 }
 
 void Editor::changeCyclePeriod(Button* button) {
@@ -358,17 +361,15 @@ void Editor::changeCyclePeriod(Button* button) {
     button->text = OSD_Printer::string("%d", period);
   }
 
-  renderflag = true;
+  setRenderFlag();
 }
 
 void Editor::changeHue(Button* button, int index, int hue_index) {
-  float hue;
-  if (scanner.getFloat(canvas, "Enter a hue:", hue)) {
-    mw.hue_cycles[index].values[hue_index] = hue;
-    button->bg = getHue(hue);
-  }
-
-  renderflag = true;  
+  openSlider(new Slider(this, LinearPalette::hue(), mw.hue_cycles[index].values[hue_index] / 360.0));
+  slider->fn = [this, button, index, hue_index](float hue) {
+    this->mw.hue_cycles[index].values[hue_index] = hue * 360.0;
+    button->bg = getHue(hue * 360.0);
+  };
 }
 
 void Editor::changeHuePeriod(Button* button, int index) {
@@ -378,29 +379,27 @@ void Editor::changeHuePeriod(Button* button, int index) {
     button->text = OSD_Printer::string("%d", period);
   }
 
-  renderflag = true;
+  setRenderFlag();
 }
 
 void Editor::deleteHue(int index) {
   if (mw.hue_cycles[index].values.size() <= 1) return;
 
   mw.hue_cycles[index].values.pop_back();
-  updateWidgets();
+  closeSlider();
 }
 
 void Editor::addHue(int index) {
   mw.hue_cycles[index].values.push_back(mw.hue_cycles[index].values[mw.hue_cycles[index].values.size() - 1]);
-  updateWidgets();
+  closeSlider();
 }
 
 void Editor::changeSat(Button* button, int sat_index) {
-  float sat;
-  if (scanner.getFloat(canvas, "Enter a saturation:", sat)) {
-    mw.sat_cycle.values[sat_index] = sat;
+  openSlider(new Slider(this, LinearPalette(getSat(0.0), getSat(1.0)), mw.sat_cycle.values[sat_index]));
+  slider->fn = [this, button, sat_index](float sat) {
+    this->mw.sat_cycle.values[sat_index] = sat;
     button->bg = getSat(sat);
-  }
-
-  renderflag = true;
+  };
 }
 
 void Editor::changeSatPeriod(Button* button) {
@@ -410,29 +409,27 @@ void Editor::changeSatPeriod(Button* button) {
     button->text = OSD_Printer::string("%d", period);
   }
 
-  renderflag = true;
+  setRenderFlag();
 }
 
 void Editor::deleteSat() {
   if (mw.sat_cycle.values.size() <= 1) return;
 
   mw.sat_cycle.values.pop_back();
-  updateWidgets();
+  closeSlider();
 }
 
 void Editor::addSat() {
   mw.sat_cycle.values.push_back(mw.sat_cycle.values[mw.sat_cycle.values.size() - 1]);
-  updateWidgets();
+  closeSlider();
 }
 
 void Editor::changeLum(Button* button, int lum_index) {
-  float lum;
-  if (scanner.getFloat(canvas, "Enter a luminance:", lum)) {
-    mw.lum_waves[lum_index].amplitude = lum; 
+  openSlider(new Slider(this, LinearPalette(Color(0), Color(255)), mw.lum_waves[lum_index].amplitude));
+  slider->fn = [this, button, lum_index](float lum) {
+    this->mw.lum_waves[lum_index].amplitude = lum;
     button->bg = getLum(lum);
-  }
-
-  renderflag = true;
+  };
 }
 
 void Editor::changeLumPeriod(Button* button, int lum_index) {
@@ -442,17 +439,30 @@ void Editor::changeLumPeriod(Button* button, int lum_index) {
     button->text = OSD_Printer::string("%d", period);
   }
 
-  renderflag = true;
+  setRenderFlag();
 }
 
 void Editor::deleteLum() {
   if (mw.lum_waves.size() <= 1) return;
 
   mw.lum_waves.pop_back();
-  updateWidgets();
+  closeSlider();
 }
 
 void Editor::addLum() {
   mw.lum_waves.push_back(mw.lum_waves[mw.lum_waves.size() - 1]);
+  closeSlider();
+}
+
+void Editor::openSlider(Slider* slider) {
+  layout.remove(this->slider);
+  this->slider = slider;
+  layout.attach(slider, 0, canvas.nr - 52, canvas.nc, 32, false);
+  setRenderFlag();
+}
+
+void Editor::closeSlider() {
+  delete slider;
+  slider = nullptr;
   updateWidgets();
 }
