@@ -12,6 +12,7 @@ using byteimage::OSD_Printer;
 using byteimage::OSD_Scanner;
 
 class Button;//Fwd. Decl.
+class Slider;//Fwd. Decl.
 
 class Editor : public WidgetDisplay {
 protected:
@@ -19,6 +20,8 @@ protected:
   TextRenderer* font;
   OSD_Printer osd;
   OSD_Scanner scanner;
+
+  Slider* slider;
   
   void resetMW();
   void commit();
@@ -56,6 +59,9 @@ public:
   void changeLumPeriod(Button* button, int lum_index);
   void deleteLum();
   void addLum();
+
+  void openSlider(Slider* slider);
+  void closeSlider();
 
   //TODO: Better hue, sat, lum editors
 };

@@ -28,6 +28,39 @@ public:
   }
 };
 
+class Slider : public Widget {
+public:
+  Editor* editor;
+  LinearPalette pal;
+  float value;
+  std::function<void(float)> fn;
+  
+  Slider(Editor* editor, const LinearPalette& pal, float initial_value)
+    : Widget(editor), editor(editor), pal(pal), value(initial_value) { }
+
+  virtual void render(ByteImage& canvas, int x, int y) {
+    Color color;
+    for (int c = 0; c < w; c++) {
+      color = pal.inUnit((float)c / (w - 1));
+      DrawRect(canvas, x + c, y, 1, h, color.r, color.g, color.b);
+    }
+    DrawRect(canvas, x + (int)(value * (w - 1) + 0.5), y, 1, h, 255);
+  }
+
+  virtual void handleEvent(SDL_Event event) {
+    int x;
+
+    if (event.type == SDL_MOUSEBUTTONDOWN) x = event.button.x;
+    else if (event.type == SDL_MOUSEMOTION) x = event.motion.x;
+    else return;
+    
+    value = (float)x / (w - 1);
+    if (fn) fn(value);
+
+    editor->setRenderFlag();
+  }
+};
+
 Color getHue(float hue) {
   Color c;
   hsl2rgb(hue, 1.0, 0.5, c.r, c.g, c.b);
@@ -288,12 +321,15 @@ Editor::Editor() : WidgetDisplay(600, 800) {
   scanner.setColors(Color(255), Color(0));
   scanner.setDisplay(this);
 
+  slider = nullptr;
+
   frameDelay = 25;
   
   resetMW();
 }
 
 Editor::~Editor() {
+  delete slider;
   delete font;
 }
 
