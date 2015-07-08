@@ -1,0 +1,572 @@
+#include "fractal.h"
+
+#include <byteimage/osd.h>
+
+using namespace byteimage;
+
+constexpr double bailout = 1024.0;
+constexpr double bailout2 = bailout * bailout;
+
+inline bool bailedOut(HPComplex& z) {
+  return sqMag(descend(z)) > bailout2;
+}
+
+double getSmoothingMagnitude(const LPComplex& z) {
+  double r2 = sqMag(z);
+  return 1.0 - log2(0.5 * log(r2) / log(bailout));
+}
+
+void getRefOrbit(std::vector<HPComplex>& X, const HPComplex& X0) {
+  X[0].re = X0.re; X[0].im = X0.im;
+
+  for (int i = 1; i < X.size(); i++) {
+    X[i].re = X[i - 1].re * X[i - 1].re - X[i - 1].im * X[i - 1].im + X0.re;
+    X[i].im = 2.0 * (X[i - 1].re * X[i - 1].im) + X0.im;
+    
+    if (bailedOut(X[i])) {
+      X.resize(i);
+      return;
+    }
+  }
+}
+
+void getSeries(std::vector<HPComplex>& A, std::vector<HPComplex>& B, std::vector<HPComplex>& C,
+	       const std::vector<HPComplex>& X) {
+  A.resize(X.size());
+  B.resize(X.size());
+  C.resize(X.size());
+  
+  A[0].re = 1.0;  A[0].im = 0.0;
+  B[0].re = 0.0;  B[0].im = 0.0;
+  C[0].re = 0.0;  C[0].im = 0.0;
+
+  for (int i = 1; i < X.size(); i++) {
+    A[i].re = 2.0 * (X[i - 1].re * A[i - 1].re - X[i - 1].im * A[i - 1].im) + 1.0;
+    A[i].im = 2.0 * (X[i - 1].re * A[i - 1].im + X[i - 1].im * A[i - 1].re);
+
+    B[i].re = 2.0 * (X[i - 1].re * B[i - 1].re - X[i - 1].im * B[i - 1].im) + A[i].re * A[i].re - A[i].im * A[i].im;
+    B[i].im = 2.0 * (X[i - 1].re * B[i - 1].im + X[i - 1].im * B[i - 1].re + A[i].re * A[i].im);
+
+    C[i].re = 2.0 * (X[i - 1].re * C[i - 1].re - X[i - 1].im * C[i - 1].im + A[i].re * B[i].re - A[i].im * B[i].im);
+    C[i].im = 2.0 * (X[i - 1].re * C[i - 1].im + X[i - 1].im * C[i - 1].re + A[i].re * B[i].im + A[i].im * B[i].re);
+  }
+}
+
+bool isUnstable(const LPComplex& bterm, const LPComplex& cterm) {
+  double bmag = bterm.re * bterm.re + bterm.im * bterm.im;
+  double cmag = cterm.re * cterm.re + cterm.im * cterm.im;
+  return (cmag && 1e5 * cmag >= bmag);
+}
+
+int getIterations(const std::vector<HPComplex>& X,
+		  const std::vector<HPComplex>& A, const std::vector<HPComplex>& B, const std::vector<HPComplex>& C,
+		  const HPComplex& ref, const HPComplex& Y0, int N,
+		  float& smoothing) {
+  LPComplex eps, eps2, eps3, a, b, c;
+  HPComplex Y;
+  Y.re = Y0.re - ref.re;
+  Y.im = Y0.im - ref.im;
+  
+  eps.re = Y.re.get_d();
+  eps.im = Y.im.get_d();
+  eps2 = sq(eps);
+  eps3 = eps * eps2;
+
+  std::vector<LPComplex> d(X.size());
+  for (int i = 0; i < X.size(); i++) {
+    a.re = A[i].re.get_d(); a.im = A[i].im.get_d();
+    b.re = B[i].re.get_d(); b.im = B[i].im.get_d();
+    c.re = C[i].re.get_d(); c.im = C[i].im.get_d();
+
+    a = a * eps;
+    b = b * eps2;
+    c = c * eps3;
+    if (isUnstable(b, c)) {
+      d.resize(i / 2 + 1);
+      break;
+    }
+    
+    d[i] = a + b + c;
+  }
+
+  int low = 0, high = d.size() - 1, mid = d.size() / 2, found = d.size();
+  while (low <= high) {
+    Y.re = X[mid].re + d[mid].re;
+    Y.im = X[mid].im + d[mid].im;
+
+    if (!bailedOut(Y))
+      low = mid + 1;
+    else {
+      high = mid - 1;
+      found = mid;
+    }
+    
+    mid = (low + high) / 2;
+  }
+  if (found < d.size()) {
+    smoothing = getSmoothingMagnitude(d[found]);
+    return found;
+  }
+  
+  HPComplex Yn;
+  Y.re = Yn.re = X[d.size() - 1].re + d[d.size() - 1].re;
+  Y.im = Yn.im = X[d.size() - 1].im + d[d.size() - 1].im;
+  for (int i = d.size(); i < N; i++) {
+    Yn.re = Y.re * Y.re - Y.im * Y.im + Y0.re;
+    Yn.im = 2.0 * (Y.re * Y.im) + Y0.im;
+
+    if (bailedOut(Yn)) {
+      smoothing = getSmoothingMagnitude(descend(Yn));
+      return i;
+    }
+
+    Y.re = Yn.re;
+    Y.im = Yn.im;      
+  }
+  
+  return N;
+}
+
+//TODO: Fix OSD_Printer by moving it to the display class
+
+void FractalRender::save() {
+  osd.hide();
+
+  std::string fn;
+  if (!scanner.getString(canvas, "Enter a filename to save:", fn)) return;
+
+  HPComplex center;
+  center.re = corner.re + (img.nc / 2) * sz.re;
+  center.im = corner.im + (img.nr / 2) * sz.im;
+    
+  FILE* fp = fopen(fn.c_str(), "w");
+  if (fp) {
+    fprintf(fp, "%d\n", N);
+    mpf_out_str(fp, 10, 0, center.re.get_mpf_t());
+    fprintf(fp, "\n");
+    mpf_out_str(fp, 10, 0, center.im.get_mpf_t());
+    fprintf(fp, "\n");
+    mpf_out_str(fp, 10, 0, sz.re.get_mpf_t());
+    fprintf(fp, "\n");
+    mpf_out_str(fp, 10, 0, sz.im.get_mpf_t());
+    fprintf(fp, "\n");
+    fclose(fp);
+    osd.print("Saved to " + fn);
+  }
+  else {
+    osd.print("Could not save to " + fn);
+  }
+}
+
+void FractalRender::load() {
+  osd.hide();
+
+  std::string fn;
+  if (!scanner.getString(canvas, "Enter a filename to load:", fn)) return;
+
+  char buf[10 * 1024];
+
+  HPComplex center;
+  FILE* fp = fopen(fn.c_str(), "r");
+  if (fp) {
+    fscanf(fp, "%d\n", &N);
+    fscanf(fp, "%s\n", buf); center.re = buf;
+    fscanf(fp, "%s\n", buf); center.im = buf;
+    fscanf(fp, "%s\n", buf); sz.re = buf;
+    fscanf(fp, "%s\n", buf); sz.im = buf;
+    fclose(fp);
+
+    corner.re = center.re - (img.nc / 2) * sz.re;
+    corner.im = center.im - (img.nr / 2) * sz.im;
+
+    pal = mw.cache(N);
+      
+    renderflag = true;
+    osd.print("Loaded from " + fn);
+  }
+  else {
+    osd.print("Could not load from " + fn);
+    }
+}
+
+void FractalRender::screenshot() {
+  char fn[256];
+  int t = (int)time(NULL);
+  sprintf(fn, "%d.png", t);
+  img.save_filename(fn);
+  osd.print(OSD_Printer::string("Saved screenshot to %s", fn));
+}
+
+void FractalRender::constructDefaultPalette() {
+  mw.load_filename("default.pal");
+  updatePalette();
+}
+
+void FractalRender::updatePalette() {
+  pal = mw.cache(N);
+}
+
+void FractalRender::reset() {
+  renderflag = drawlines = smoothflag = true;
+
+  N = 256;
+  constructDefaultPalette();
+    
+  corner.re = -2.5;
+  corner.im = -1.5;
+    
+  sz.re = (1.5 - corner.re) / img.nc;
+  sz.im = (1.5 - corner.im) / img.nr;
+
+  display->setRenderFlag();
+}
+  
+void FractalRender::recolor() {
+  for (int r = 0; r < img.nr; r++)
+    colorLine(r);
+}
+
+void FractalRender::colorLine(int r) {
+  Color color;
+  for (int c = 0; c < img.nc; c++) {
+    if (grid.at(r, c).iterations < N) {
+      if (smoothflag)
+	color = interp(pal[grid.at(r, c).iterations - 1],
+		       pal[grid.at(r, c).iterations],
+		       grid.at(r, c).smoothing);
+      else
+	color = pal[grid.at(r, c).iterations];
+    }
+    else color = Color(0);
+      
+    img.at(r, c, 0) = color.r;
+    img.at(r, c, 1) = color.g;
+    img.at(r, c, 2) = color.b;
+  }
+}
+
+bool FractalRender::drawLine(int r) {
+  colorLine(r);
+
+  //TODO: Implement a "wait" function or interlace
+  /*
+  
+  if (osd.shouldDraw()) {
+    canvas = img;
+    osd.draw(canvas);
+    updateImage(canvas);
+  }
+  else
+    updateImage(img);
+  SDL_Event event;
+  while (SDL_PollEvent(&event)) {
+    if (event.type == SDL_MOUSEBUTTONDOWN
+	|| (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE)) {
+      SDL_PushEvent(&event);
+      return true;
+    }
+    Display::handleEvent(event);
+  }
+  Display::update();
+
+  return exitflag;
+  */
+
+  return false;//del
+}
+
+void FractalRender::render() {
+  const double minpreview = 1.5e-16;
+  bool hwflag = false;
+    
+  if (sz.re.get_d() >= minpreview && sz.im.get_d() >= minpreview) {
+    hwflag = true;
+    //TODO: Fix
+    //SDL_SetWindowTitle(window, "Rendering (hardware arithmetic)...");
+  }
+
+  //Both HW and Arb
+  HPComplex pt;
+  int its;
+
+  //HW
+  LPComplex Z, Z0;
+
+  //Arb
+  std::vector<Pt> probe_pts;
+  std::vector<HPComplex> X, A, B, C;
+  HPComplex probe, ref;
+
+  //Probe for deepest reference orbit
+  if (!hwflag) {
+    for (int c = 0; c < img.nc; c += 2) {
+      probe_pts.push_back(Pt(img.nr / 4, c));
+      probe_pts.push_back(Pt(img.nr / 2, c));
+      probe_pts.push_back(Pt(3 * img.nr / 4, c));
+    }
+    for (int r = 0; r < img.nr; r += 2)
+      probe_pts.push_back(Pt(r, img.nc / 2));
+      
+    for (auto pt : probe_pts) {
+      X.resize(N);
+      probe.re = corner.re + pt.c * sz.re;
+      probe.im = corner.im + (img.nr - pt.r - 1) * sz.im;
+      getRefOrbit(X, probe);
+
+      if (X.size() > A.size()) {
+	A = std::move(X);
+	ref = probe;
+      }
+    }
+
+    printf("Deepest probe was %d / %d iterations\n", (int)A.size(), N);
+
+    X = std::move(A);    
+    getSeries(A, B, C, X);
+  }
+    
+  if (drawlines) img = canvas;
+
+  for (int r = 0, i = 0; r < img.nr; r++) {
+    for (int c = 0; c < img.nc; c++, i++) {
+      pt.re = corner.re + c * sz.re;
+      pt.im = corner.im + (img.nr - r - 1) * sz.im;
+	
+      if (hwflag) {
+	Z.re = Z0.re = pt.re.get_d();
+	Z.im = Z0.im = pt.im.get_d();
+	for (its = 0; its < N; its++) {
+	  Z = sq(Z) + Z0;
+	  if (sqMag(Z) > bailout2) break;
+	}
+	if (its < N) {
+	  grid.at(r, c).iterations = its;
+	  grid.at(r, c).smoothing = getSmoothingMagnitude(Z);
+	}
+	else {
+	  grid.at(r, c).iterations = N;
+	  grid.at(r, c).smoothing = 0.0;
+	}
+      }
+      else {
+	grid.at(r, c).iterations = getIterations(X, A, B, C, ref, pt, N, grid.at(r, c).smoothing);
+      }
+    }
+
+    if (drawlines && drawLine(r)) break;
+  }
+
+  display->setRenderFlag();
+}
+
+void FractalRender::update() {
+  display->frameDelay = 0;
+    
+  if (renderflag) {
+    //TODO: Figure out window stuff
+    //SDL_SetWindowTitle(window, "Rendering...");
+    Uint32 ticks = SDL_GetTicks();
+    render();
+    ticks = SDL_GetTicks() - ticks;
+    char str[256];
+    sprintf(str, "Time: %dms", ticks);
+    //TODO: Figure out window stuff
+    //SDL_SetWindowTitle(window, str);
+    
+    renderflag = false;
+    display->setRenderFlag();
+  }
+
+  if (osd.shouldDraw()) display->setRenderFlag();
+
+  if (!mousedown) display->frameDelay = 25;
+}
+
+FractalRender::FractalRender(WidgetDisplay* display, int h, int w) : Widget(display) {
+  canvas = ByteImage(h, w);
+  for (int r = 0; r < h; r++)
+    for (int c = 0; c < w; c++)
+      canvas.at(r, c) = (((r / 4) + (c / 4)) & 1)? 255 : 192;
+  canvas = img = canvas.toColor();
+  grid = RenderGrid(h, w);
+  
+  osd.setColors(Color(255), Color(0));
+  scanner.setColors(Color(255), Color(0));
+  scanner.setDisplay(display);
+  
+  reset();
+}
+
+void FractalRender::handleKeyEvent(SDL_Event event) {
+  int n;
+  if (event.type == SDL_KEYDOWN)
+    switch (event.key.keysym.sym) {
+    case SDLK_F5: display->setRenderFlag(); break;
+    case SDLK_BACKSPACE: reset(); break;
+    case SDLK_RETURN: renderflag = true; break;
+    case SDLK_UP:
+      N += 256;
+      pal = mw.cache(N);
+      renderflag = true;
+      osd.print(OSD_Printer::string("%d iterations", N));
+      break;
+    case SDLK_DOWN:
+      if (N > 256) N -= 256;
+      recolor();
+      display->setRenderFlag();
+      osd.print(OSD_Printer::string("%d iterations", N));
+      break;
+    case SDLK_F2: save(); break;
+    case SDLK_F3: constructDefaultPalette(); load(); break;
+    case SDLK_p://TODO: Open editor
+      constructDefaultPalette();
+      recolor();
+      display->setRenderFlag();
+      break;
+    case SDLK_F11: screenshot(); break;
+    case SDLK_s:
+      osd.hide();
+      smoothflag = !smoothflag;
+      osd.print(OSD_Printer::string("Smoothing: %s", smoothflag? "on" : "off"));
+      renderflag = true;
+      break;
+    case SDLK_d:
+      osd.hide();
+      drawlines = !drawlines;
+      osd.print(OSD_Printer::string("Draw lines mode: %s", drawlines? "on" : "off"));
+      break;
+    case SDLK_i:
+      osd.hide();
+      if (scanner.getInt(canvas, "How many iterations?", n)) {
+	if (n > N) {
+	  pal = mw.cache(n);
+	  renderflag = true;
+	}
+	else {
+	  recolor();
+	  display->setRenderFlag();
+	}
+	N = n;
+	osd.print(OSD_Printer::string("%d iterations.", N));
+      }
+      break;
+    }
+}
+
+void FractalRender::handleEvent(SDL_Event event) {
+  if (event.type == SDL_MOUSEBUTTONDOWN) {
+    mx = event.button.x;
+    my = event.button.y;
+    scale = 1.0;
+	
+    if (event.button.button == SDL_BUTTON_RIGHT) mousedown = 2;
+    else mousedown = 1;
+  }
+  else if (event.type == SDL_MOUSEMOTION) {
+    if (mousedown == 1) {
+      int dx = event.button.x - mx;
+      int dy = event.button.y - my;
+      float dist = sqrt(dx * dx + dy * dy);
+      if (SDL_GetModState() & KMOD_SHIFT) dist = -dist;
+      scale = (float)pow(32.0, dist / img.nr);
+      display->setRenderFlag();
+    }
+    else if (mousedown == 2) {
+      nx = event.button.x;
+      ny = event.button.y;
+      display->setRenderFlag();
+    }
+  }
+  else if (event.type == SDL_MOUSEBUTTONUP && mousedown) {
+    if (mousedown == 1) {
+      HPComplex pt;
+      pt.re = corner.re + mx * sz.re;
+      pt.im = corner.im + (img.nr - my - 1) * sz.im;
+	
+      sz.re *= (1.0 / scale);
+      sz.im *= (1.0 / scale);
+	
+      corner.re = pt.re - mx * sz.re;
+      corner.im = pt.im - (img.nr - my - 1) * sz.im;
+	
+      renderflag = true;
+    }
+
+    else if (mousedown == 2) {
+      HPComplex mv;
+      mv.re = mx - nx;
+      mv.im = ny - my;
+      corner.re = corner.re + mv.re * sz.re;
+      corner.im = corner.im + mv.im * sz.im;
+
+      renderflag = true;
+    }
+
+    mousedown = 0;
+  }
+}
+
+void FractalRender::render(ByteImage& canvas, int x, int y) {
+  if (mousedown == 1){
+    canvas.fill(255);
+    canvas.blitSampled(img, scale, scale, y + my - scale * my, x + mx - scale * mx);
+  }
+  else if (mousedown == 2) {
+    canvas.fill(255);
+    canvas.blit(img, y + ny - my, x + nx - mx);
+  }
+  else {
+    canvas.blit(img, y, x);
+  }
+  
+  osd.draw(canvas);
+}
+
+class MyDisplay : public WidgetDisplay {
+protected:
+  void handleEvent(SDL_Event event) {
+    if (layout.widgets[0].widget == fractal) {
+      if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP)
+	fractal->handleKeyEvent(event);
+    }
+    //TODO: Palette key events
+
+    WidgetDisplay::handleEvent(event);
+  }
+
+  void update() {
+    if (layout.widgets[0].widget == fractal) {
+      fractal->update();
+    }
+      
+    WidgetDisplay::update();
+  }
+  
+public:
+  FractalRender* fractal;
+  
+  MyDisplay() : WidgetDisplay(600, 800, "NewMandel") {
+    fractal = new FractalRender(this, canvas.nr, canvas.nc);
+    openFractal();
+  }
+  
+  ~MyDisplay() {
+    delete fractal;
+  }
+
+  void openFractal() {
+    layout.clear();
+    layout.attach(fractal, 0, 0, canvas.nc, canvas.nr, false);
+  }
+  
+  void openPalette();//TODO
+};
+
+int main(int argc, char* argv[]) {
+  TextRenderer font("res/FreeSans.ttf", 20);
+  OSD_Printer::setFont(&font);
+  OSD_Scanner::setFont(&font);
+
+  MyDisplay().main();
+  return 0;
+}
