@@ -20,8 +20,11 @@ palettemaker: multiwave.h editor.h editor.o palettemaker.cpp
 fractal.o: complex.h grid.h multiwave.h fractal.h fractal.cpp
 	$(CXX) fractal.cpp -c $(CFLAGS)
 
-test: multiwave.o fractal.o
-	$(CXX) multiwave.o fractal.o -o $@ `byteimage-config --libs` -lgmp -lgmpxx
+display.o: fractal.h display.h display.cpp
+	$(CXX) display.cpp -c $(CFLAGS)
+
+test: multiwave.o fractal.o display.o
+	$(CXX) multiwave.o fractal.o display.o -o $@ `byteimage-config --libs` -lgmp -lgmpxx
 
 clean:
 	rm -f *~ *.o mandel palettemaker test
