@@ -1,15 +1,9 @@
-all: mandel palettemaker test
+all: mandel palettemaker
 
 CFLAGS = `byteimage-config --cflags` -Wno-unused-result -O3
 
 multiwave.o: multiwave.h multiwave.cpp
 	$(CXX) multiwave.cpp -c $(CFLAGS)
-
-main.o: complex.h grid.h multiwave.h main.cpp
-	$(CXX) main.cpp -c $(CFLAGS)
-
-mandel: multiwave.o main.o
-	$(CXX) multiwave.o main.o -o $@ `byteimage-config --libs` -lgmp -lgmpxx
 
 editor.o: multiwave.h editor.h editor.cpp
 	$(CXX) editor.cpp -c $(CFLAGS)
@@ -23,11 +17,11 @@ fractal.o: complex.h grid.h multiwave.h fractal.h fractal.cpp
 display.o: fractal.h display.h display.cpp
 	$(CXX) display.cpp -c $(CFLAGS)
 
-test: multiwave.o fractal.o display.o
+mandel: multiwave.o fractal.o display.o
 	$(CXX) multiwave.o fractal.o display.o -o $@ `byteimage-config --libs` -lgmp -lgmpxx
 
 clean:
-	rm -f *~ *.o mandel palettemaker test
+	rm -f *~ *.o mandel palettemaker
 
 run: mandel
 	./mandel
