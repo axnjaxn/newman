@@ -6,6 +6,7 @@
 #include <byteimage/widget.h>
 #include <byteimage/osd.h>
 
+using byteimage::WidgetLayout;
 using byteimage::WidgetDisplay;
 using byteimage::TextRenderer;
 using byteimage::OSD_Printer;
@@ -14,7 +15,7 @@ using byteimage::OSD_Scanner;
 class Button;//Fwd. Decl.
 class Slider;//Fwd. Decl.
 
-class Editor : public WidgetDisplay {
+class Editor : public WidgetLayout {
 protected:
   std::string filename;
   TextRenderer* font;
@@ -34,7 +35,7 @@ protected:
 public:  
   MultiWaveGenerator mw;
   
-  Editor();
+  Editor(WidgetDisplay* display);
   virtual ~Editor();
 
   void updateWidgets();

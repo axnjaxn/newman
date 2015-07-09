@@ -11,7 +11,7 @@ public:
   bool drawMinus = false, drawPlus = false;
   std::function<void()> fn;
 
-  Button(Editor* editor) : Widget(editor), editor(editor) { }
+  Button(Editor* editor) : Widget(editor->getDisplay()), editor(editor) { }
 
   virtual void render(ByteImage& canvas, int x, int y) {
     DrawRect(canvas, x, y, w, h, bg.r, bg.g, bg.b);
@@ -36,7 +36,7 @@ public:
   std::function<void(float)> fn;
   
   Slider(Editor* editor, const LinearPalette& pal, float initial_value)
-    : Widget(editor), editor(editor), pal(pal), value(initial_value) { }
+    : Widget(editor->getDisplay()), editor(editor), pal(pal), value(initial_value) { }
 
   virtual void render(ByteImage& canvas, int x, int y) {
     Color color;
@@ -57,7 +57,7 @@ public:
     value = (float)x / (w - 1);
     if (fn) fn(value);
 
-    editor->setRenderFlag();
+    display->setRenderFlag();
   }
 };
 
@@ -80,7 +80,7 @@ Color getLum(float lum) {
 }
 
 WidgetLayout* HueCyclePreview(Editor* editor, int index) {
-  WidgetLayout* layout = new WidgetLayout(editor);
+  WidgetLayout* layout = new WidgetLayout(editor->getDisplay());
   auto& cycle = editor->mw.hue_cycles[index];
   Button* button;
   int hue_index = 0;
@@ -136,7 +136,7 @@ WidgetLayout* HueCyclePreview(Editor* editor, int index) {
 }
 
 WidgetLayout* SatCyclePreview(Editor* editor) {
-  WidgetLayout* layout = new WidgetLayout(editor);
+  WidgetLayout* layout = new WidgetLayout(editor->getDisplay());
   auto& cycle = editor->mw.sat_cycle;
   Button* button;
   int hue_index = 0;
@@ -171,7 +171,7 @@ WidgetLayout* SatCyclePreview(Editor* editor) {
 }
 
 WidgetLayout* LumWavesPreview(Editor* editor) {
-  WidgetLayout* layout = new WidgetLayout(editor);
+  WidgetLayout* layout = new WidgetLayout(editor->getDisplay());
   auto& waves = editor->mw.lum_waves;
   Button* button;
   int hue_index = 0;
@@ -233,6 +233,8 @@ void Editor::commit() {
 }
 
 void Editor::load() {
+  //TODO
+  /*
   std::string fn;
   if (scanner.getString(canvas, "Enter a filename to load:", fn)) {
     filename = fn;
@@ -240,23 +242,27 @@ void Editor::load() {
   }
 
   closeSlider();
+  */
 }
   
 void Editor::save() {
+  //TODO
+  /*
   std::string fn;
   if (scanner.getString(canvas, "Enter a filename to save:", fn))
     mw.save_filename(fn.c_str());
+  */
 }
 
 void Editor::updateWidgets() {
-  layout.clear();
+  clear();
 
   Button* button;
   int pos = 0;
   
   for (int i = 0; i < mw.hue_cycles.size(); i++) {
     WidgetLayout* layout = HueCyclePreview(this, i);
-    this->layout.attach(layout, 0, pos, layout->width(), layout->height());
+    attach(layout, 0, pos, layout->width(), layout->height());
     pos += 32;
   }
 
@@ -264,14 +270,14 @@ void Editor::updateWidgets() {
   button->bg = Color(0); button->fg = Color(255);
   button->text = OSD_Printer::string("%d", mw.hue_period);
   button->fn = [this, button]() {this->changeCyclePeriod(button);};
-  layout.attach(button, 0, pos, 64, 32);
+  attach(button, 0, pos, 64, 32);
   pos += 32;
 
   pos += 16;
 
   {
     WidgetLayout* layout = SatCyclePreview(this);
-    this->layout.attach(layout, 0, pos, layout->width(), layout->height());
+    attach(layout, 0, pos, layout->width(), layout->height());
     pos += 32;
   }
 
@@ -279,25 +285,27 @@ void Editor::updateWidgets() {
   button->bg = Color(0); button->fg = Color(255);
   button->text = OSD_Printer::string("%d", mw.sat_cycle.period);
   button->fn = [this, button]() {this->changeSatPeriod(button);};
-  layout.attach(button, 0, pos, 64, 32);
+  attach(button, 0, pos, 64, 32);
   pos += 32;
   
   pos += 16;
 
   {
     WidgetLayout* layout = LumWavesPreview(this);
-    this->layout.attach(layout, 0, pos, layout->width(), layout->height());
+    attach(layout, 0, pos, layout->width(), layout->height());
   }
 
   if (slider)
-    layout.attach(slider, 0, canvas.nr - 52, canvas.nc, 32, false);
+    attach(slider, 0, h - 52, w, 32, false);
   
-  layout.attach(new MWPreview(this), 0, canvas.nr - 20, canvas.nc, 20);
+  attach(new MWPreview(display), 0, h - 20, w, 20);
 
-  setRenderFlag();
+  display->setRenderFlag();
 }
 
 void Editor::handleEvent(SDL_Event event) {
+  //TODO
+  /*
   if (event.type == SDL_KEYDOWN)
     switch (event.key.keysym.sym) {
     case SDLK_F2: save(); break;
@@ -305,9 +313,12 @@ void Editor::handleEvent(SDL_Event event) {
     case SDLK_RETURN: commit(); break;      
     }
   WidgetDisplay::handleEvent(event);
+  */
 }
 
 void Editor::update() {
+  //TODO
+  /*
   if (renderflag || osd.shouldDraw()) {
     render();
     osd.draw(canvas);
@@ -315,18 +326,22 @@ void Editor::update() {
     renderflag = false;    
   }
   Display::update();
+  */
 }
 
-Editor::Editor() : WidgetDisplay(600, 800) {
+Editor::Editor(WidgetDisplay* display) : WidgetLayout(display) {
   font = new TextRenderer("res/FreeSans.ttf", 10);
-  
+
+  //TODO
+  /*
   osd.setColors(Color(255), Color(0));
   scanner.setColors(Color(255), Color(0));
   scanner.setDisplay(this);
+  */
 
   slider = nullptr;
 
-  frameDelay = 25;
+  //frameDelay = 25;
   
   resetMW();
 }
@@ -355,6 +370,8 @@ void Editor::addCycle(int index) {
 }
 
 void Editor::changeCyclePeriod(Button* button) {
+  //TODO
+  /*
   int period;
   if (scanner.getInt(canvas, "Enter the number of iterations:", period)) {
     mw.hue_period = period;
@@ -362,6 +379,7 @@ void Editor::changeCyclePeriod(Button* button) {
   }
 
   setRenderFlag();
+  */
 }
 
 void Editor::changeHue(Button* button, int index, int hue_index) {
@@ -373,13 +391,16 @@ void Editor::changeHue(Button* button, int index, int hue_index) {
 }
 
 void Editor::changeHuePeriod(Button* button, int index) {
+  //TODO
+  /*
   int period;
   if (scanner.getInt(canvas, "Enter the number of iterations:", period)) {
     mw.hue_cycles[index].period = period;
     button->text = OSD_Printer::string("%d", period);
   }
-
+  
   setRenderFlag();
+  */
 }
 
 void Editor::deleteHue(int index) {
@@ -403,6 +424,8 @@ void Editor::changeSat(Button* button, int sat_index) {
 }
 
 void Editor::changeSatPeriod(Button* button) {
+  //TODO
+  /*
   int period;
   if (scanner.getInt(canvas, "Enter the number of iterations:", period)) {
     mw.sat_cycle.period = period;
@@ -410,6 +433,7 @@ void Editor::changeSatPeriod(Button* button) {
   }
 
   setRenderFlag();
+  */
 }
 
 void Editor::deleteSat() {
@@ -433,6 +457,7 @@ void Editor::changeLum(Button* button, int lum_index) {
 }
 
 void Editor::changeLumPeriod(Button* button, int lum_index) {
+  /*
   int period;
   if (scanner.getInt(canvas, "Enter the number of iterations:", period)) {
     mw.lum_waves[lum_index].period = period;
@@ -440,6 +465,7 @@ void Editor::changeLumPeriod(Button* button, int lum_index) {
   }
 
   setRenderFlag();
+  */
 }
 
 void Editor::deleteLum() {
@@ -455,10 +481,10 @@ void Editor::addLum() {
 }
 
 void Editor::openSlider(Slider* slider) {
-  layout.remove(this->slider);
+  remove(this->slider);
   this->slider = slider;
-  layout.attach(slider, 0, canvas.nr - 52, canvas.nc, 32, false);
-  setRenderFlag();
+  attach(slider, 0, h - 52, w, 32, false);
+  display->setRenderFlag();
 }
 
 void Editor::closeSlider() {
