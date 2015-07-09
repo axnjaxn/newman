@@ -4,6 +4,11 @@
 #include "fractal.h"
 #include "editor.h"
 
+#include <byteimage/osd.h>
+
+using byteimage::OSD_Scanner;
+using byteimage::OSD_Printer;
+
 class MyDisplay : public WidgetDisplay {
 protected:
   TextRenderer font;
@@ -12,6 +17,7 @@ protected:
   
   void handleEvent(SDL_Event event);
   void update();
+  void render();
   
 public:
   FractalRender* fractal;

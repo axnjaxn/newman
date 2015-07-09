@@ -1,6 +1,5 @@
 #include "fractal.h"
-
-#include <byteimage/osd.h>
+#include "display.h"
 
 using namespace byteimage;
 
@@ -130,8 +129,8 @@ int getIterations(const std::vector<HPComplex>& X,
 //TODO: Fix OSD_Printer by moving it to the display class
 
 void FractalRender::save() {
-  osd.hide();
-
+  MyDisplay* display = (MyDisplay*)this->display;
+  
   std::string fn;
   if (!scanner.getString(canvas, "Enter a filename to save:", fn)) return;
 
@@ -151,16 +150,16 @@ void FractalRender::save() {
     mpf_out_str(fp, 10, 0, sz.im.get_mpf_t());
     fprintf(fp, "\n");
     fclose(fp);
-    osd.print("Saved to " + fn);
+    display->print("Saved to " + fn);
   }
   else {
-    osd.print("Could not save to " + fn);
+    display->print("Could not save to " + fn);
   }
 }
 
 void FractalRender::load() {
-  osd.hide();
-
+  MyDisplay* display = (MyDisplay*)this->display;
+  
   std::string fn;
   if (!scanner.getString(canvas, "Enter a filename to load:", fn)) return;
 
@@ -182,19 +181,21 @@ void FractalRender::load() {
     pal = mw.cache(N);
       
     renderflag = true;
-    osd.print("Loaded from " + fn);
+    display->print("Loaded from " + fn);
   }
   else {
-    osd.print("Could not load from " + fn);
-    }
+    display->print("Could not load from " + fn);
+  }
 }
 
 void FractalRender::screenshot() {
+  MyDisplay* display = (MyDisplay*)this->display;
+
   char fn[256];
   int t = (int)time(NULL);
   sprintf(fn, "%d.png", t);
   img.save_filename(fn);
-  osd.print(OSD_Printer::string("Saved screenshot to %s", fn));
+  display->print(OSD_Printer::string("Saved screenshot to %s", fn));
 }
 
 void FractalRender::constructDefaultPalette() {
@@ -377,8 +378,6 @@ void FractalRender::update() {
     display->setRenderFlag();
   }
 
-  if (osd.shouldDraw()) display->setRenderFlag();
-
   if (!mousedown) display->frameDelay = 25;
 }
 
@@ -390,7 +389,6 @@ FractalRender::FractalRender(WidgetDisplay* display, int h, int w) : Widget(disp
   canvas = img = canvas.toColor();
   grid = RenderGrid(h, w);
   
-  osd.setColors(Color(255), Color(0));
   scanner.setColors(Color(255), Color(0));
   scanner.setDisplay(display);
   
@@ -398,6 +396,7 @@ FractalRender::FractalRender(WidgetDisplay* display, int h, int w) : Widget(disp
 }
 
 void FractalRender::handleKeyEvent(SDL_Event event) {
+  MyDisplay* display = (MyDisplay*)this->display;
   int n;
   if (event.type == SDL_KEYDOWN)
     switch (event.key.keysym.sym) {
@@ -408,13 +407,13 @@ void FractalRender::handleKeyEvent(SDL_Event event) {
       N += 256;
       pal = mw.cache(N);
       renderflag = true;
-      osd.print(OSD_Printer::string("%d iterations", N));
+      display->print("%d iterations", N);
       break;
     case SDLK_DOWN:
       if (N > 256) N -= 256;
       recolor();
       display->setRenderFlag();
-      osd.print(OSD_Printer::string("%d iterations", N));
+      display->print("%d iterations", N);
       break;
     case SDLK_F2: save(); break;
     case SDLK_F3: constructDefaultPalette(); load(); break;
@@ -425,18 +424,15 @@ void FractalRender::handleKeyEvent(SDL_Event event) {
       break;
     case SDLK_F11: screenshot(); break;
     case SDLK_s:
-      osd.hide();
       smoothflag = !smoothflag;
-      osd.print(OSD_Printer::string("Smoothing: %s", smoothflag? "on" : "off"));
+      display->print("Smoothing: %s", smoothflag? "on" : "off");
       renderflag = true;
       break;
     case SDLK_d:
-      osd.hide();
       drawlines = !drawlines;
-      osd.print(OSD_Printer::string("Draw lines mode: %s", drawlines? "on" : "off"));
+      display->print("Draw lines mode: %s", drawlines? "on" : "off");
       break;
     case SDLK_i:
-      osd.hide();
       if (scanner.getInt(canvas, "How many iterations?", n)) {
 	if (n > N) {
 	  pal = mw.cache(n);
@@ -447,7 +443,7 @@ void FractalRender::handleKeyEvent(SDL_Event event) {
 	  display->setRenderFlag();
 	}
 	N = n;
-	osd.print(OSD_Printer::string("%d iterations.", N));
+	display->print("%d iterations.", N);
       }
       break;
     }
@@ -508,16 +504,16 @@ void FractalRender::handleEvent(SDL_Event event) {
 
 void FractalRender::render(ByteImage& canvas, int x, int y) {
   if (mousedown == 1){
-    canvas.fill(255);
-    canvas.blitSampled(img, scale, scale, y + my - scale * my, x + mx - scale * mx);
+    this->canvas.fill(255);
+    this->canvas.blitSampled(img, scale, scale, my - scale * my, mx - scale * mx);
   }
   else if (mousedown == 2) {
-    canvas.fill(255);
-    canvas.blit(img, y + ny - my, x + nx - mx);
+    this->canvas.fill(255);
+    this->canvas.blit(img, ny - my, nx - mx);
   }
   else {
-    canvas.blit(img, y, x);
+    this->canvas = img;
   }
-  
-  osd.draw(canvas);
+
+  canvas.blit(this->canvas, y, x);
 }

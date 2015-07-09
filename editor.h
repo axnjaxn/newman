@@ -9,7 +9,6 @@
 using byteimage::WidgetLayout;
 using byteimage::WidgetDisplay;
 using byteimage::TextRenderer;
-using byteimage::OSD_Printer;
 using byteimage::OSD_Scanner;
 
 class Button;//Fwd. Decl.
@@ -19,7 +18,6 @@ class Editor : public WidgetLayout {
 protected:
   std::string filename;
   TextRenderer* font;
-  OSD_Printer osd;
   OSD_Scanner scanner;
 
   Slider* slider;

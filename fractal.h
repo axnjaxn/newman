@@ -9,7 +9,6 @@
 
 using byteimage::ByteImage;
 using byteimage::OSD_Scanner;
-using byteimage::OSD_Printer;
 using byteimage::Widget;
 using byteimage::WidgetDisplay;
 
@@ -26,7 +25,6 @@ protected:
 
   //For render output and display
   ByteImage img, canvas;
-  OSD_Printer osd;
   OSD_Scanner scanner;
   
   //For coloring

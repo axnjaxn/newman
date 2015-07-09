@@ -19,13 +19,27 @@ void MyDisplay::update() {
   if (layout.widgets[0].widget == fractal)
     fractal->update();
   //TODO: Palette per-frame function?
-      
+
+  if (osd.shouldDraw()) {setRenderFlag();}
+  
   WidgetDisplay::update();
+}
+
+void MyDisplay::render() {
+  WidgetDisplay::render();
+  osd.draw(canvas);
 }
   
 MyDisplay::MyDisplay() : WidgetDisplay(600, 800, "NewMandel"), font("res/FreeSans.ttf", 20) {
   fractal = new FractalRender(this, canvas.nr, canvas.nc);
   editor = new Editor(this);
+
+  OSD_Printer::setFont(&font);
+  OSD_Scanner::setFont(&font);
+  osd.setColors(Color(255), Color(0));
+  scanner.setColors(Color(255), Color(0));
+  scanner.setDisplay(this);
+
   openFractal();
 }
   
@@ -33,7 +47,7 @@ MyDisplay::~MyDisplay() {
   delete fractal;
 }
 
-//TODO: This group (don't forget to add OSD printing to update function)
+//TODO: This group (don't forget to hide OSD)
 bool MyDisplay::getInt(const std::string& prompt, int& v) { }
 
 bool MyDisplay::getFloat(const std::string& prompt, float& v) { }
@@ -47,7 +61,7 @@ void MyDisplay::print(const std::string& str, ...) {
   va_start(args, str);
   char buf[1024];
   vsprintf(buf, str.c_str(), args);
-  osd.print(str);
+  osd.print(buf);
 }
 
 void MyDisplay::openFractal() {
@@ -61,10 +75,6 @@ void MyDisplay::openPalette() {
 }
 
 int main(int argc, char* argv[]) {
-  TextRenderer font("res/FreeSans.ttf", 20);
-  OSD_Printer::setFont(&font);
-  OSD_Scanner::setFont(&font);
-
   MyDisplay().main();
   return 0;
 }

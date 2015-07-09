@@ -1,4 +1,6 @@
 #include "editor.h"
+#include "display.h"
+
 #include <byteimage/render.h>
 
 using namespace byteimage;
@@ -228,8 +230,10 @@ void Editor::resetMW() {
 }
 
 void Editor::commit() {
+  MyDisplay* display = (MyDisplay*)this->display;
+  
   mw.save_filename(filename.c_str());
-  osd.print("Committed changes.");
+  display->print("Committed changes.");
 }
 
 void Editor::load() {
@@ -359,7 +363,9 @@ void Editor::deleteCycle(int index) {
 }
 
 void Editor::addCycle(int index) {
-  osd.print("Add cycle", 2000);
+  MyDisplay* display = (MyDisplay*)this->display;
+  
+  display->print("Add cycle", 2000);
 
   MultiWaveGenerator::FloatCycle cycle;
   cycle.values.push_back(0.0);
