@@ -126,8 +126,6 @@ int getIterations(const std::vector<HPComplex>& X,
   return N;
 }
 
-//TODO: Fix OSD_Printer by moving it to the display class
-
 void FractalRender::save() {
   MyDisplay* display = (MyDisplay*)this->display;
   
@@ -247,33 +245,23 @@ void FractalRender::colorLine(int r) {
 }
 
 bool FractalRender::drawLine(int r) {
+  MyDisplay* display = (MyDisplay*)this->display;
+  
   colorLine(r);
 
-  //TODO: Implement a "wait" function or interlace
-  /*
-  
-  if (osd.shouldDraw()) {
-    canvas = img;
-    osd.draw(canvas);
-    updateImage(canvas);
-  }
-  else
-    updateImage(img);
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
     if (event.type == SDL_MOUSEBUTTONDOWN
-	|| (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE)) {
+	|| (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE)
+	|| (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE)
+	|| event.type == SDL_QUIT) {
       SDL_PushEvent(&event);
       return true;
     }
-    Display::handleEvent(event);
   }
-  Display::update();
 
-  return exitflag;
-  */
-
-  return false;//del
+  display->setRenderFlag();
+  return display->forceUpdate();
 }
 
 void FractalRender::render() {

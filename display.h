@@ -26,6 +26,8 @@ public:
   MyDisplay();  
   ~MyDisplay();
 
+  bool forceUpdate();
+  
   //Hooks to OSD_Scanner
   bool getInt(const std::string& prompt, int& v);
   bool getFloat(const std::string& prompt, float& v);

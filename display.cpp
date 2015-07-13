@@ -46,6 +46,14 @@ MyDisplay::~MyDisplay() {
   delete fractal;
 }
 
+bool MyDisplay::forceUpdate() {
+  if (osd.shouldDraw()) {setRenderFlag();}
+
+  WidgetDisplay::update();
+
+  return exitflag;
+}
+
 bool MyDisplay::getInt(const std::string& prompt, int& v) {
   osd.hide();
   return scanner.getInt(canvas, prompt, v);
