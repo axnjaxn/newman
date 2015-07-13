@@ -207,6 +207,7 @@ void FractalRender::updatePalette() {
 
 void FractalRender::reset() {
   renderflag = drawlines = smoothflag = true;
+  mousedown = 0;
 
   N = 256;
   constructDefaultPalette();
