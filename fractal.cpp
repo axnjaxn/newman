@@ -417,10 +417,8 @@ void FractalRender::handleKeyEvent(SDL_Event event) {
       break;
     case SDLK_F2: save(); break;
     case SDLK_F3: constructDefaultPalette(); load(); break;
-    case SDLK_p://TODO: Open editor
-      constructDefaultPalette();
-      recolor();
-      display->setRenderFlag();
+    case SDLK_p:
+      display->openPalette();
       break;
     case SDLK_F11: screenshot(); break;
     case SDLK_s:

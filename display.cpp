@@ -67,11 +67,14 @@ void MyDisplay::print(const std::string& str, ...) {
 void MyDisplay::openFractal() {
   layout.clear();
   layout.attach(fractal, 0, 0, canvas.nc, canvas.nr, false);
+  setRenderFlag();
+  //TODO: Shared multiwave palette
 }
 
 void MyDisplay::openPalette() {
   layout.clear();
   layout.attach(editor, 0, 0, canvas.nc, canvas.nr, false);
+  setRenderFlag();
 }
 
 int main(int argc, char* argv[]) {
