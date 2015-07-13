@@ -28,8 +28,8 @@ protected:
   OSD_Scanner scanner;
   
   //For coloring
-  RenderGrid grid;
   MultiWaveGenerator mw;
+  RenderGrid grid;
   CachedPalette pal;
   
   //For interactive movement
@@ -51,7 +51,7 @@ protected:
 
   void update();
   
-public:
+public:  
   FractalRender(WidgetDisplay* display, int h, int w);
 
   virtual void handleKeyEvent(SDL_Event event);

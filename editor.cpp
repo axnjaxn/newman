@@ -211,11 +211,14 @@ WidgetLayout* LumWavesPreview(Editor* editor) {
 }
 
 class MWPreview : public Widget {
+protected:
+  Editor* editor;
+  
 public:
-  MWPreview(WidgetDisplay* display) : Widget(display) { }
+  MWPreview(Editor* editor) : Widget(editor->getDisplay()), editor(editor) { }
 
   virtual void render(ByteImage& canvas, int x, int y) {
-    CachedPalette pal = ((Editor*)display)->mw.cache(w);
+    CachedPalette pal = editor->mw.cache(w);
     for (int i = 0; i < w; i++)
       DrawRect(canvas, x + i, y, 1, h, pal[i].r, pal[i].g, pal[i].b);
   }
@@ -227,13 +230,6 @@ void Editor::resetMW() {
   filename = "default.pal";
 
   closeSlider();
-}
-
-void Editor::commit() {
-  MyDisplay* display = (MyDisplay*)this->display;
-  
-  mw.save_filename(filename.c_str());
-  display->print("Committed changes.");
 }
 
 void Editor::load() {
@@ -300,7 +296,7 @@ void Editor::updateWidgets() {
   if (slider)
     attach(slider, 0, h - 52, w, 32, false);
   
-  attach(new MWPreview(display), 0, h - 20, w, 20);
+  attach(new MWPreview(this), 0, h - 20, w, 20);
 
   display->setRenderFlag();
 }
@@ -460,10 +456,14 @@ void Editor::closeSlider() {
 }
 
 void Editor::handleKeyEvent(SDL_Event event) {
+  //TODO: Unified multiwave
+  
+  MyDisplay* display = (MyDisplay*)this->display;
+  
   if (event.type == SDL_KEYDOWN)
     switch (event.key.keysym.sym) {
     case SDLK_F2: save(); break;
     case SDLK_F3: load(); break;
-    case SDLK_RETURN: commit(); break;      
+    case SDLK_p: display->openFractal(); break;
     }
 }

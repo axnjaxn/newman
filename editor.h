@@ -21,7 +21,6 @@ protected:
   Slider* slider;
   
   void resetMW();
-  void commit();
   void load();
   void save();
   

@@ -1,6 +1,7 @@
 all: mandel
 
-CFLAGS = `byteimage-config --cflags` -Wno-unused-result -O3
+#TODO: O3
+CFLAGS = `byteimage-config --cflags` -Wno-unused-result -g
 
 multiwave.o: multiwave.h multiwave.cpp
 	$(CXX) multiwave.cpp -c $(CFLAGS)
