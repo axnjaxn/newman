@@ -12,7 +12,7 @@ multiwave.o: multiwave.h multiwave.cpp
 editor.o: multiwave.h editor.h editor.cpp
 	$(CXX) editor.cpp -c $(CFLAGS)
 
-fractal.o: complex.h grid.h multiwave.h fractal.h fractal.cpp
+fractal.o: complex.h grid.h render.h multiwave.h fractal.h fractal.cpp
 	$(CXX) fractal.cpp -c $(CFLAGS)
 
 display.o: fractal.h display.h display.cpp

@@ -6,22 +6,23 @@
 
 class Mandelbrot {
 protected:
+  RenderGrid grid;
   std::vector<HPComplex> X, A, B, C;
   
-  HPComplex findProbe();
-  void computeReference(const HPComplex& X0);
+  void findProbe();
+  void computeOrbit(const HPComplex& X0);
   void computeSeries();
-  RenderGrid::EscapeValue getIterations(int r, int c);
+  RenderGrid::EscapeValue getIterations(const HPComplex& Y0);
+  RenderGrid::EscapeValue getIterationsHW(const HPComplex& Y0);
   
 public:
   int N;
   HPComplex center, sz;
-  
-  RenderGrid grid;
 
   Mandelbrot();
   Mandelbrot(int nr, int nc);
 
+  //TODO: Remove legacy functionality
   void getCorner(HPComplex& corner) const;
   void setCornerSize(HPComplex& corner, HPComplex& sz);
   void loadLegacy(const char* fn);
@@ -33,8 +34,11 @@ public:
   void precompute();
   void computeRow(int r);
 
-  RenderGrid::EscapeValue at(int r, int c);
-  RenderGrid::EscapeValue at(int r, int c, int sc);
+  const RenderGrid::EscapeValue& at(int r, int c);
+  RenderGrid::EscapeValue at(int r, int c, int sc); //Averages values
+  
+  void scaleUp(int sc);   //By duplicating values.
+  void scaleDown(int sc); //By averaging values.
 
   void load(const char* fn);
   void save(const char* fn);

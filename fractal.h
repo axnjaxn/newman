@@ -1,8 +1,7 @@
 #ifndef _BPJ_NEWMANDEL_FRACTAL_H
 #define _BPJ_NEWMANDEL_FRACTAL_H
 
-#include "complex.h"
-#include "grid.h"
+#include "render.h"
 #include "multiwave.h"
 #include <byteimage/osd.h>
 #include <byteimage/widget.h>
@@ -19,16 +18,14 @@ protected:
   bool drawlines;  //This forces progress display
   bool smoothflag; //Smooth coloring
 
-  //Numerical settings
-  HPComplex corner, sz;
-  int N;
+  //Numerical results of latest render
+  Mandelbrot mandel;
 
   //For render output and display
   ByteImage img, canvas;
   
   //For coloring
   MultiWaveGenerator mw;
-  RenderGrid grid;
   CachedPalette pal;
   
   //For interactive movement
