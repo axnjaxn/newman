@@ -282,8 +282,7 @@ void FractalRender::render() {
     
   if (sz.re.get_d() >= minpreview && sz.im.get_d() >= minpreview) {
     hwflag = true;
-    //TODO: Fix
-    //SDL_SetWindowTitle(window, "Rendering (hardware arithmetic)...");
+    display->setTitle("Rendering (hardware arithmetic)...");
   }
 
   //Both HW and Arb
@@ -364,15 +363,13 @@ void FractalRender::update() {
   display->frameDelay = 0;
     
   if (renderflag) {
-    //TODO: Figure out window stuff
-    //SDL_SetWindowTitle(window, "Rendering...");
+    display->setTitle("Rendering...");
     Uint32 ticks = SDL_GetTicks();
     render();
     ticks = SDL_GetTicks() - ticks;
     char str[256];
     sprintf(str, "Time: %dms", ticks);
-    //TODO: Figure out window stuff
-    //SDL_SetWindowTitle(window, str);
+    display->setTitle(str);
     
     renderflag = false;
     display->setRenderFlag();
