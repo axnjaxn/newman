@@ -12,7 +12,7 @@ using byteimage::OSD_Scanner;
 using byteimage::Widget;
 using byteimage::WidgetDisplay;
 
-class FractalRender : public Widget {
+class FractalViewer : public Widget {
 protected:
   //Options
   bool renderflag; //Requires recomputation
@@ -51,7 +51,7 @@ protected:
   void update();
   
 public:  
-  FractalRender(WidgetDisplay* display, int h, int w);
+  FractalViewer(WidgetDisplay* display, int h, int w);
 
   virtual void handleKeyEvent(SDL_Event event);
   virtual void handleEvent(SDL_Event event);

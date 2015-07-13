@@ -30,7 +30,7 @@ void MyDisplay::render() {
 }
   
 MyDisplay::MyDisplay() : WidgetDisplay(600, 800, "NewMandel"), font("res/FreeSans.ttf", 20) {
-  fractal = new FractalRender(this, canvas.nr, canvas.nc);
+  fractal = new FractalViewer(this, canvas.nr, canvas.nc);
   editor = new Editor(this);
 
   OSD_Printer::setFont(&font);

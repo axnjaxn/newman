@@ -126,7 +126,7 @@ int getIterations(const std::vector<HPComplex>& X,
   return N;
 }
 
-void FractalRender::save() {
+void FractalViewer::save() {
   MyDisplay* display = (MyDisplay*)this->display;
   
   std::string fn;
@@ -155,7 +155,7 @@ void FractalRender::save() {
   }
 }
 
-void FractalRender::load() {
+void FractalViewer::load() {
   MyDisplay* display = (MyDisplay*)this->display;
   
   std::string fn;
@@ -186,7 +186,7 @@ void FractalRender::load() {
   }
 }
 
-void FractalRender::screenshot() {
+void FractalViewer::screenshot() {
   MyDisplay* display = (MyDisplay*)this->display;
 
   char fn[256];
@@ -196,16 +196,16 @@ void FractalRender::screenshot() {
   display->print(OSD_Printer::string("Saved screenshot to %s", fn));
 }
 
-void FractalRender::constructDefaultPalette() {
+void FractalViewer::constructDefaultPalette() {
   mw.load_filename("default.pal");
   updatePalette();
 }
 
-void FractalRender::updatePalette() {
+void FractalViewer::updatePalette() {
   pal = mw.cache(N);
 }
 
-void FractalRender::reset() {
+void FractalViewer::reset() {
   renderflag = drawlines = smoothflag = true;
   mousedown = 0;
 
@@ -221,12 +221,12 @@ void FractalRender::reset() {
   display->setRenderFlag();
 }
   
-void FractalRender::recolor() {
+void FractalViewer::recolor() {
   for (int r = 0; r < img.nr; r++)
     colorLine(r);
 }
 
-void FractalRender::colorLine(int r) {
+void FractalViewer::colorLine(int r) {
   Color color;
   for (int c = 0; c < img.nc; c++) {
     if (grid.at(r, c).iterations < N) {
@@ -245,7 +245,7 @@ void FractalRender::colorLine(int r) {
   }
 }
 
-bool FractalRender::drawLine(int r) {
+bool FractalViewer::drawLine(int r) {
   MyDisplay* display = (MyDisplay*)this->display;
   
   colorLine(r);
@@ -265,7 +265,7 @@ bool FractalRender::drawLine(int r) {
   return display->forceUpdate();
 }
 
-void FractalRender::render() {
+void FractalViewer::render() {
   const double minpreview = 1.5e-16;
   bool hwflag = false;
     
@@ -348,7 +348,7 @@ void FractalRender::render() {
   display->setRenderFlag();
 }
 
-void FractalRender::update() {
+void FractalViewer::update() {
   display->frameDelay = 0;
     
   if (renderflag) {
@@ -367,7 +367,7 @@ void FractalRender::update() {
   if (!mousedown) display->frameDelay = 25;
 }
 
-FractalRender::FractalRender(WidgetDisplay* display, int h, int w) : Widget(display) {
+FractalViewer::FractalViewer(WidgetDisplay* display, int h, int w) : Widget(display) {
   canvas = ByteImage(h, w);
   for (int r = 0; r < h; r++)
     for (int c = 0; c < w; c++)
@@ -378,7 +378,7 @@ FractalRender::FractalRender(WidgetDisplay* display, int h, int w) : Widget(disp
   reset();
 }
 
-void FractalRender::handleKeyEvent(SDL_Event event) {
+void FractalViewer::handleKeyEvent(SDL_Event event) {
   MyDisplay* display = (MyDisplay*)this->display;
   int n;
   if (event.type == SDL_KEYDOWN)
@@ -430,7 +430,7 @@ void FractalRender::handleKeyEvent(SDL_Event event) {
     }
 }
 
-void FractalRender::handleEvent(SDL_Event event) {
+void FractalViewer::handleEvent(SDL_Event event) {
   if (event.type == SDL_MOUSEBUTTONDOWN) {
     mx = event.button.x;
     my = event.button.y;
@@ -483,7 +483,7 @@ void FractalRender::handleEvent(SDL_Event event) {
   }
 }
 
-void FractalRender::render(ByteImage& canvas, int x, int y) {
+void FractalViewer::render(ByteImage& canvas, int x, int y) {
   if (mousedown == 1){
     this->canvas.fill(255);
     this->canvas.blitSampled(img, scale, scale, my - scale * my, mx - scale * mx);

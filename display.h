@@ -20,7 +20,7 @@ protected:
   void render();
   
 public:
-  FractalRender* fractal;
+  FractalViewer* fractal;
   Editor* editor;
   
   MyDisplay();  
