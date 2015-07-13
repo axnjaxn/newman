@@ -237,25 +237,23 @@ void Editor::commit() {
 }
 
 void Editor::load() {
-  //TODO
-  /*
+  MyDisplay* display = (MyDisplay*)this->display;
+  
   std::string fn;
-  if (scanner.getString(canvas, "Enter a filename to load:", fn)) {
+  if (display->getString("Enter a filename to load:", fn)) {
     filename = fn;
     mw.load_filename(fn.c_str());
   }
 
   closeSlider();
-  */
 }
   
 void Editor::save() {
-  //TODO
-  /*
+  MyDisplay* display = (MyDisplay*)this->display;
+  
   std::string fn;
-  if (scanner.getString(canvas, "Enter a filename to save:", fn))
+  if (display->getString("Enter a filename to save:", fn))
     mw.save_filename(fn.c_str());
-  */
 }
 
 void Editor::updateWidgets() {
@@ -307,46 +305,11 @@ void Editor::updateWidgets() {
   display->setRenderFlag();
 }
 
-void Editor::handleEvent(SDL_Event event) {
-  //TODO
-  /*
-  if (event.type == SDL_KEYDOWN)
-    switch (event.key.keysym.sym) {
-    case SDLK_F2: save(); break;
-    case SDLK_F3: load(); break;
-    case SDLK_RETURN: commit(); break;      
-    }
-  WidgetDisplay::handleEvent(event);
-  */
-}
-
-void Editor::update() {
-  //TODO
-  /*
-  if (renderflag || osd.shouldDraw()) {
-    render();
-    osd.draw(canvas);
-    updateImage(canvas);
-    renderflag = false;    
-  }
-  Display::update();
-  */
-}
-
 Editor::Editor(WidgetDisplay* display) : WidgetLayout(display) {
   font = new TextRenderer("res/FreeSans.ttf", 10);
 
-  //TODO
-  /*
-  osd.setColors(Color(255), Color(0));
-  scanner.setColors(Color(255), Color(0));
-  scanner.setDisplay(this);
-  */
-
   slider = nullptr;
 
-  //frameDelay = 25;
-  
   resetMW();
 }
 
@@ -376,16 +339,15 @@ void Editor::addCycle(int index) {
 }
 
 void Editor::changeCyclePeriod(Button* button) {
-  //TODO
-  /*
+  MyDisplay* display = (MyDisplay*)this->display;
+  
   int period;
-  if (scanner.getInt(canvas, "Enter the number of iterations:", period)) {
+  if (display->getInt("Enter the number of iterations:", period)) {
     mw.hue_period = period;
     button->text = OSD_Printer::string("%d", period);
   }
 
-  setRenderFlag();
-  */
+  display->setRenderFlag();
 }
 
 void Editor::changeHue(Button* button, int index, int hue_index) {
@@ -397,16 +359,15 @@ void Editor::changeHue(Button* button, int index, int hue_index) {
 }
 
 void Editor::changeHuePeriod(Button* button, int index) {
-  //TODO
-  /*
+  MyDisplay* display = (MyDisplay*)this->display;
+  
   int period;
-  if (scanner.getInt(canvas, "Enter the number of iterations:", period)) {
+  if (display->getInt("Enter the number of iterations:", period)) {
     mw.hue_cycles[index].period = period;
     button->text = OSD_Printer::string("%d", period);
   }
   
-  setRenderFlag();
-  */
+  display->setRenderFlag();
 }
 
 void Editor::deleteHue(int index) {
@@ -430,16 +391,15 @@ void Editor::changeSat(Button* button, int sat_index) {
 }
 
 void Editor::changeSatPeriod(Button* button) {
-  //TODO
-  /*
+  MyDisplay* display = (MyDisplay*)this->display;
+  
   int period;
-  if (scanner.getInt(canvas, "Enter the number of iterations:", period)) {
+  if (display->getInt("Enter the number of iterations:", period)) {
     mw.sat_cycle.period = period;
     button->text = OSD_Printer::string("%d", period);
   }
 
-  setRenderFlag();
-  */
+  display->setRenderFlag();
 }
 
 void Editor::deleteSat() {
@@ -463,15 +423,15 @@ void Editor::changeLum(Button* button, int lum_index) {
 }
 
 void Editor::changeLumPeriod(Button* button, int lum_index) {
-  /*
+  MyDisplay* display = (MyDisplay*)this->display;
+  
   int period;
-  if (scanner.getInt(canvas, "Enter the number of iterations:", period)) {
+  if (display->getInt("Enter the number of iterations:", period)) {
     mw.lum_waves[lum_index].period = period;
     button->text = OSD_Printer::string("%d", period);
   }
 
-  setRenderFlag();
-  */
+  display->setRenderFlag();
 }
 
 void Editor::deleteLum() {
@@ -497,4 +457,13 @@ void Editor::closeSlider() {
   delete slider;
   slider = nullptr;
   updateWidgets();
+}
+
+void Editor::handleKeyEvent(SDL_Event event) {
+  if (event.type == SDL_KEYDOWN)
+    switch (event.key.keysym.sym) {
+    case SDLK_F2: save(); break;
+    case SDLK_F3: load(); break;
+    case SDLK_RETURN: commit(); break;      
+    }
 }

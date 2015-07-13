@@ -8,8 +8,8 @@ void MyDisplay::handleEvent(SDL_Event event) {
       fractal->handleKeyEvent(event);
   }
   else if (layout.widgets[0].widget == editor) {
-    if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP);
-    //TODO: Palette key events
+    if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP)
+      editor->handleKeyEvent(event);
   }
 
   WidgetDisplay::handleEvent(event);
@@ -18,7 +18,6 @@ void MyDisplay::handleEvent(SDL_Event event) {
 void MyDisplay::update() {
   if (layout.widgets[0].widget == fractal)
     fractal->update();
-  //TODO: Palette per-frame function?
 
   if (osd.shouldDraw()) {setRenderFlag();}
   
@@ -47,14 +46,25 @@ MyDisplay::~MyDisplay() {
   delete fractal;
 }
 
-//TODO: This group (don't forget to hide OSD)
-bool MyDisplay::getInt(const std::string& prompt, int& v) { }
+bool MyDisplay::getInt(const std::string& prompt, int& v) {
+  osd.hide();
+  return scanner.getInt(canvas, prompt, v);
+}
 
-bool MyDisplay::getFloat(const std::string& prompt, float& v) { }
+bool MyDisplay::getFloat(const std::string& prompt, float& v) {
+  osd.hide();
+  return scanner.getFloat(canvas, prompt, v);
+}
 
-bool MyDisplay::getDouble(const std::string& prompt, double& v) { }  
+bool MyDisplay::getDouble(const std::string& prompt, double& v) {
+  osd.hide();
+  return scanner.getDouble(canvas, prompt, v);
+}
 
-bool MyDisplay::getString(const std::string& prompt, std::string& v) { }
+bool MyDisplay::getString(const std::string& prompt, std::string& v) {
+  osd.hide();
+  return scanner.getString(canvas, prompt, v);
+}
 
 void MyDisplay::print(const std::string& str, ...) {
   va_list args;

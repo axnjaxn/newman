@@ -4,12 +4,11 @@
 #include "multiwave.h"
 
 #include <byteimage/widget.h>
-#include <byteimage/osd.h>
+#include <byteimage/font.h>
 
 using byteimage::WidgetLayout;
 using byteimage::WidgetDisplay;
 using byteimage::TextRenderer;
-using byteimage::OSD_Scanner;
 
 class Button;//Fwd. Decl.
 class Slider;//Fwd. Decl.
@@ -18,7 +17,6 @@ class Editor : public WidgetLayout {
 protected:
   std::string filename;
   TextRenderer* font;
-  OSD_Scanner scanner;
 
   Slider* slider;
   
@@ -26,9 +24,6 @@ protected:
   void commit();
   void load();
   void save();
-
-  virtual void handleEvent(SDL_Event event);
-  virtual void update();
   
 public:  
   MultiWaveGenerator mw;
@@ -61,6 +56,8 @@ public:
 
   void openSlider(Slider* slider);
   void closeSlider();
+
+  virtual void handleKeyEvent(SDL_Event event);
 };
 
 #endif
