@@ -467,3 +467,12 @@ void Editor::handleKeyEvent(SDL_Event event) {
     case SDLK_p: display->openFractal(); break;
     }
 }
+
+void Editor::render(ByteImage& target, int x, int y) {
+  target.blit(bg, x, y);
+  WidgetLayout::render(target, x, y);
+}
+
+void Editor::setBackground(const ByteImage& img) {
+  bg = img;
+}

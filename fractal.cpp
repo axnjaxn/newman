@@ -176,7 +176,7 @@ void FractalRender::load() {
     corner.re = center.re - (img.nc / 2) * sz.re;
     corner.im = center.im - (img.nr / 2) * sz.im;
 
-    pal = mw.cache(N);
+    updatePalette();
       
     renderflag = true;
     display->print("Loaded from " + fn);
@@ -398,7 +398,7 @@ void FractalRender::handleKeyEvent(SDL_Event event) {
       display->print("%d iterations", N);
       break;
     case SDLK_F2: save(); break;
-    case SDLK_F3: constructDefaultPalette(); load(); break;
+    case SDLK_F3: load(); break;
     case SDLK_p:
       display->openPalette();
       break;

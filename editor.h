@@ -15,6 +15,8 @@ class Slider;//Fwd. Decl.
 
 class Editor : public WidgetLayout {
 protected:
+  ByteImage bg;
+  
   std::string filename;
   TextRenderer* font;
 
@@ -57,6 +59,9 @@ public:
   void closeSlider();
 
   virtual void handleKeyEvent(SDL_Event event);
+  virtual void render(ByteImage& target, int x, int y);
+
+  void setBackground(const ByteImage& img);
 };
 
 #endif

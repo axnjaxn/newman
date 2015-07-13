@@ -96,6 +96,9 @@ void MyDisplay::openFractal() {
 }
 
 void MyDisplay::openPalette() {
+  fractal->render(canvas, 0, 0);
+  editor->setBackground(canvas);
+  
   layout.clear();
   layout.attach(editor, 0, 0, canvas.nc, canvas.nr, false);
 
