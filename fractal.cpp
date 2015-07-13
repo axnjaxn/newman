@@ -132,7 +132,7 @@ void FractalRender::save() {
   MyDisplay* display = (MyDisplay*)this->display;
   
   std::string fn;
-  if (!scanner.getString(canvas, "Enter a filename to save:", fn)) return;
+  if (!display->getString("Enter a filename to save:", fn)) return;
 
   HPComplex center;
   center.re = corner.re + (img.nc / 2) * sz.re;
@@ -161,7 +161,7 @@ void FractalRender::load() {
   MyDisplay* display = (MyDisplay*)this->display;
   
   std::string fn;
-  if (!scanner.getString(canvas, "Enter a filename to load:", fn)) return;
+  if (!display->getString("Enter a filename to load:", fn)) return;
 
   char buf[10 * 1024];
 
@@ -389,9 +389,6 @@ FractalRender::FractalRender(WidgetDisplay* display, int h, int w) : Widget(disp
   canvas = img = canvas.toColor();
   grid = RenderGrid(h, w);
   
-  scanner.setColors(Color(255), Color(0));
-  scanner.setDisplay(display);
-  
   reset();
 }
 
@@ -431,7 +428,7 @@ void FractalRender::handleKeyEvent(SDL_Event event) {
       display->print("Draw lines mode: %s", drawlines? "on" : "off");
       break;
     case SDLK_i:
-      if (scanner.getInt(canvas, "How many iterations?", n)) {
+      if (display->getInt("How many iterations?", n)) {
 	if (n > N) {
 	  pal = mw.cache(n);
 	  renderflag = true;

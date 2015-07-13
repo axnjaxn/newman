@@ -25,7 +25,6 @@ protected:
 
   //For render output and display
   ByteImage img, canvas;
-  OSD_Scanner scanner;
   
   //For coloring
   MultiWaveGenerator mw;
