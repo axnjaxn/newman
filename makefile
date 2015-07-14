@@ -1,7 +1,6 @@
 all: mandel
 
-#TODO: O3
-CFLAGS = `byteimage-config --cflags` -Wno-unused-result -g
+CFLAGS = `byteimage-config --cflags` -Wno-unused-result -O3
 
 render.o: render.h render.cpp
 	$(CXX) render.cpp -c $(CFLAGS)
