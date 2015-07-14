@@ -94,26 +94,40 @@ void FractalViewer::recolor() {
     colorLine(r);
 }
 
+Color FractalViewer::getColor(const RenderGrid::EscapeValue& escape) {
+  if (escape.iterations >= mandel.N) return Color(0);
+  else if (!smoothflag) return pal[escape.iterations];
+  else return interp(pal[escape.iterations - 1],
+		     pal[escape.iterations],
+		     escape.smoothing);
+}
+
 void FractalViewer::colorLine(int r) {
-  RenderGrid::EscapeValue escape;
   Color color;
-  for (int c = 0; c < img.nc; c++) {
-    if (sc == 1) escape = mandel.at(r, c);
-    else escape = mandel.at(r, c, sc);
-    
-    if (escape.iterations < mandel.N) {
-      if (smoothflag)
-	color = interp(pal[escape.iterations - 1],
-		       pal[escape.iterations],
-		       escape.smoothing);
-      else
-	color = pal[escape.iterations];
-    }
-    else color = Color(0);
+
+  if (sc == 1) {
+    for (int c = 0; c < img.nc; c++) {
+      color = getColor(mandel.at(r, c));
       
-    img.at(r, c, 0) = color.r;
-    img.at(r, c, 1) = color.g;
-    img.at(r, c, 2) = color.b;
+      img.at(r, c, 0) = color.r;
+      img.at(r, c, 1) = color.g;
+      img.at(r, c, 2) = color.b;
+    }
+  }
+  else {
+    Pt3f rgb;
+    for (int c = 0; c < img.nc; c++) {
+      rgb = Pt3f();
+      for (int r1 = r * sc; r1 < (r + 1) * sc; r1++)
+	for (int c1 = c * sc; c1 < (c + 1) * sc; c1++) {
+	  color = getColor(mandel.at(r1, c1));
+	  rgb.x += color.r; rgb.y += color.g; rgb.z += color.b;
+	}
+      rgb = rgb / (sc * sc);
+      img.at(r, c, 0) = clip(rgb.x);
+      img.at(r, c, 1) = clip(rgb.y);
+      img.at(r, c, 2) = clip(rgb.z);
+    }
   }
 }
 

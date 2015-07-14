@@ -6,6 +6,7 @@
 #include <byteimage/osd.h>
 #include <byteimage/widget.h>
 
+using byteimage::Color;
 using byteimage::ByteImage;
 using byteimage::OSD_Scanner;
 using byteimage::Widget;
@@ -42,6 +43,7 @@ protected:
   void reset();
   
   void recolor();
+  Color getColor(const RenderGrid::EscapeValue& escape);
   void colorLine(int r);
   bool drawLine(int r);
   void render();
