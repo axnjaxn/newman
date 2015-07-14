@@ -82,6 +82,7 @@ void FractalViewer::reset() {
   mousedown = 0;
 
   mandel = Mandelbrot(img.nr, img.nc);
+  sc = 1;
   
   constructDefaultPalette();
 
@@ -97,8 +98,10 @@ void FractalViewer::colorLine(int r) {
   RenderGrid::EscapeValue escape;
   Color color;
   for (int c = 0; c < img.nc; c++) {
-    escape = mandel.at(r, c);
-    if (mandel.at(r, c).iterations < mandel.N) {
+    if (sc == 1) escape = mandel.at(r, c);
+    else escape = mandel.at(r, c, sc);
+    
+    if (escape.iterations < mandel.N) {
       if (smoothflag)
 	color = interp(pal[escape.iterations - 1],
 		       pal[escape.iterations],
@@ -143,7 +146,11 @@ void FractalViewer::render() {
   if (drawlines) img = canvas;
 
   for (int r = 0; r < img.nr; r++) {
-    mandel.computeRow(r);
+    if (sc == 1) mandel.computeRow(r);
+    else {
+      for (int r1 = r * sc; r1 < (r + 1) * sc; r1++)
+	mandel.computeRow(r1);
+    }
     if (drawlines && drawLine(r)) break;
   }
 
@@ -198,6 +205,38 @@ void FractalViewer::handleKeyEvent(SDL_Event event) {
       recolor();
       display->setRenderFlag();
       display->print("%d iterations", mandel.N);
+      break;
+    case SDLK_1:
+      if (sc != 1) {
+	mandel.scaleDown(sc);
+	sc = 1;
+	renderflag = true;
+      }
+      display->print("Multisampling off", sc);
+      break;
+    case SDLK_2:
+      if (sc != 2) {
+	mandel.scaleDown(sc);
+	mandel.scaleUp(sc = 2);
+	renderflag = true;
+      }
+      display->print("%dx multisampling", sc);
+      break;
+    case SDLK_3:
+      if (sc != 3) {
+	mandel.scaleDown(sc);
+	mandel.scaleUp(sc = 3);
+	renderflag = true;
+      }
+      display->print("%dx multisampling", sc);
+      break;
+    case SDLK_4:
+      if (sc != 4) {
+	mandel.scaleDown(sc);
+	mandel.scaleUp(sc = 4);
+	renderflag = true;
+      }
+      display->print("%dx multisampling", sc);
       break;
     case SDLK_F2: save(); break;
     case SDLK_F3: load(); break;
@@ -259,25 +298,25 @@ void FractalViewer::handleEvent(SDL_Event event) {
     HPComplex corner, sz;
     mandel.getCorner(corner);
     sz = mandel.sz;
-    
+   
     if (mousedown == 1) {
       HPComplex pt;
-      pt.re = corner.re + mx * sz.re;
-      pt.im = corner.im + (img.nr - my - 1) * sz.im;
+      pt.re = corner.re + sc * mx * sz.re;
+      pt.im = corner.im + (sc * img.nr - sc * my - 1) * sz.im;
 	
       sz.re *= (1.0 / scale);
       sz.im *= (1.0 / scale);
 	
-      corner.re = pt.re - mx * sz.re;
-      corner.im = pt.im - (img.nr - my - 1) * sz.im;
+      corner.re = pt.re - sc * mx * sz.re;
+      corner.im = pt.im - (sc * img.nr - sc * my - 1) * sz.im;
 	
       renderflag = true;
     }
 
     else if (mousedown == 2) {
       HPComplex mv;
-      mv.re = mx - nx;
-      mv.im = ny - my;
+      mv.re = sc * (mx - nx);
+      mv.im = sc * (ny - my);
       corner.re = corner.re + mv.re * sz.re;
       corner.im = corner.im + mv.im * sz.im;
 

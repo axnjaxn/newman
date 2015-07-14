@@ -20,6 +20,7 @@ protected:
 
   //Numerical results of latest render
   Mandelbrot mandel;
+  int sc;
 
   //For render output and display
   ByteImage img, canvas;

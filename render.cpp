@@ -249,23 +249,27 @@ RenderGrid::EscapeValue Mandelbrot::at(int r, int c, int sc) {
 }
 
 void Mandelbrot::scaleUp(int sc) {
-  Mandelbrot scaled(rows() * sc, cols() * sc);
+  RenderGrid scaled(rows() * sc, cols() * sc);
 
-  for (int r = 0; r < scaled.rows(); r++)
-    for (int c = 0; c < scaled.cols(); c++)
-      scaled.grid.at(r, c) = at(r / sc, c / sc);
-  
-  *this = std::move(scaled);
+  for (int r = 0; r < scaled.nr; r++)
+    for (int c = 0; c < scaled.nc; c++)
+      scaled.at(r, c) = at(r / sc, c / sc);
+
+  grid = std::move(scaled);
+  sz.re = sz.re / sc;
+  sz.im = sz.im / sc;
 }
 
 void Mandelbrot::scaleDown(int sc) {
-  Mandelbrot scaled(rows() / sc, cols() / sc);
+  RenderGrid scaled(rows() / sc, cols() / sc);
 
-  for (int r = 0; r < scaled.rows(); r++)
-    for (int c = 0; c < scaled.cols(); c++)
-      scaled.grid.at(r, c) = at(r, c, sc);
-  
-  *this = std::move(scaled);
+  for (int r = 0; r < scaled.nr; r++)
+    for (int c = 0; c < scaled.nc; c++)
+      scaled.at(r, c) = at(r, c, sc);
+
+  grid = std::move(scaled);
+  sz.re = sz.re * sc;
+  sz.im = sz.im * sc;
 }
 
 void Mandelbrot::load(const char* fn) { }//TODO: Format TBD
