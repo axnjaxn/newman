@@ -171,6 +171,45 @@ void FractalViewer::render() {
   display->setRenderFlag();
 }
 
+//TODO: A lot of work
+void FractalViewer::beautyRender() {
+  MyDisplay* display = (MyDisplay*)this->display;
+  display->setTitle("Creating beauty render...");
+
+  int sc = 3;
+  Mandelbrot mandel(1080 * sc, 1920 * sc);
+  mandel.center = this->mandel.center;
+  //TODO: sz
+  
+  mandel.precompute();
+  
+  for (int r = 0; r < mandel.rows(); r++) {
+    mandel.computeRow(r);
+    
+    //TODO: OSD of progress
+    display->print("Rendered row %d / %d", r + 1, mandel.rows());
+    
+    //TODO: Check events
+    colorLine(r);
+
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+      if (event.type == SDL_MOUSEBUTTONDOWN
+	  || (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE)
+	  || (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE)
+	  || event.type == SDL_QUIT) {
+	SDL_PushEvent(&event);
+	return;
+      }
+  }
+
+  display->setRenderFlag();
+  return display->forceUpdate();
+  }
+
+  //Save result
+}
+
 void FractalViewer::update() {
   display->frameDelay = 0;
     

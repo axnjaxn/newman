@@ -47,6 +47,7 @@ protected:
   void colorLine(int r);
   bool drawLine(int r);
   void render();
+  void beautyRender();
 
   void update();
   
