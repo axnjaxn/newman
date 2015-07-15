@@ -159,13 +159,22 @@ void FractalViewer::render() {
     
   if (drawlines) img = canvas;
 
+  Uint32 t = SDL_GetTicks(), dt;  
   for (int r = 0; r < img.nr; r++) {
     if (sc == 1) mandel.computeRow(r);
     else {
       for (int r1 = r * sc; r1 < (r + 1) * sc; r1++)
 	mandel.computeRow(r1);
     }
-    if (drawlines && drawLine(r)) break;
+    
+    if (drawlines) {
+      dt = SDL_GetTicks() - t;
+      if (dt > 25) {
+	t += dt;
+	if (drawLine(r)) break;
+      }
+      else colorLine(r);
+    }
   }
 
   display->setRenderFlag();
@@ -176,22 +185,30 @@ void FractalViewer::beautyRender() {
   MyDisplay* display = (MyDisplay*)this->display;
   display->setTitle("Creating beauty render...");
 
-  int sc = 3;
-  Mandelbrot mandel(1080 * sc, 1920 * sc);
-  mandel.center = this->mandel.center;
-  //TODO: sz
-  
+  Uint32 ticks = SDL_GetTicks();
+
+  int sc = this->sc;
+  Mandelbrot saved = this->mandel;
+
+  this->sc = 3;
+  mandel = Mandelbrot(1080 * this->sc, 1920 * this->sc);
+  mandel.N = saved.N;
+  mandel.center = saved.center;
+  mandel.sz.re = saved.sz.re * ((double)saved.rows() / mandel.rows());
+  mandel.sz.im = saved.sz.im * ((double)saved.rows() / mandel.rows());
+
   mandel.precompute();
+
+  display->frameDelay = 0;
+
+  Uint32 t = SDL_GetTicks(), dt;
   
-  for (int r = 0; r < mandel.rows(); r++) {
+  bool breakflag = false;
+  for (int r = 0; r < mandel.rows() && !breakflag; r++) {
     mandel.computeRow(r);
-    
-    //TODO: OSD of progress
+
     display->print("Rendered row %d / %d", r + 1, mandel.rows());
     
-    //TODO: Check events
-    colorLine(r);
-
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
       if (event.type == SDL_MOUSEBUTTONDOWN
@@ -199,15 +216,38 @@ void FractalViewer::beautyRender() {
 	  || (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE)
 	  || event.type == SDL_QUIT) {
 	SDL_PushEvent(&event);
-	return;
+	breakflag = true;
+	break;
       }
+    }
+
+    dt = SDL_GetTicks() - t;
+    
+    if (dt > 100) {
+      t += dt;
+      if (display->forceUpdate()) breakflag = true;
+    }
   }
 
-  display->setRenderFlag();
-  return display->forceUpdate();
-  }
+  display->frameDelay = 25;
 
-  //Save result
+  canvas = img;
+  img = ByteImage(1080, 1920, 3);
+  recolor();
+  
+  char fn[256];
+  sprintf(fn, "BR%d.png", (int)time(NULL));
+  img.save_filename(fn);
+  display->print(OSD_Printer::string("Saved render to %s", fn));
+
+  ticks = SDL_GetTicks() - ticks;
+  char str[256];
+  sprintf(str, "Time: %dms", ticks);
+  display->setTitle(str);
+  
+  img = canvas;
+  mandel = saved;
+  this->sc = sc;  
 }
 
 void FractalViewer::update() {
@@ -297,6 +337,9 @@ void FractalViewer::handleKeyEvent(SDL_Event event) {
       display->openPalette();
       break;
     case SDLK_F11: screenshot(); break;
+    case SDLK_b:
+      beautyRender();
+      break;
     case SDLK_s:
       smoothflag = !smoothflag;
       display->print("Smoothing: %s", smoothflag? "on" : "off");
