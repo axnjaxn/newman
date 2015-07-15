@@ -44,6 +44,16 @@ constexpr double bailout2 = bailout * bailout;
 
 inline static bool bailedOut(HPComplex& z) {return sqMag(descend(z)) > bailout2;}
 
+bool Mandelbrot::inCardioid(const HPComplex& Z) {
+  mpf_class fourth = 0.25;
+  mpf_class xmf = Z.re - fourth;
+  mpf_class y2 = Z.im * Z.im;
+  mpf_class q = xmf * xmf + y2;
+  if (q * (q + xmf) < fourth * y2) return true;//Cardioid
+  q = Z.re + 1.0;
+  return (q * q + y2 < fourth * fourth);//Second disk
+}
+
 void Mandelbrot::findProbe() {
   std::vector<Pt> probe_pts;
   HPComplex probe;
@@ -119,6 +129,13 @@ RenderGrid::EscapeValue Mandelbrot::getIterations(const HPComplex& Y0) {
   RenderGrid::EscapeValue escape;
   LPComplex eps, eps2, eps3, a, b, c;
   HPComplex Y;
+
+  if (inCardioid(Y0)) {
+    escape.iterations = N;
+    escape.smoothing = 0.0;
+    return escape;
+  }
+  
   Y.re = Y0.re - X[0].re;
   Y.im = Y0.im - X[0].im;
   
@@ -191,6 +208,12 @@ RenderGrid::EscapeValue Mandelbrot::getIterationsHW(const HPComplex& Y0) {
   HPComplex pt;
   LPComplex Z, Z0 = descend(Y0);
 
+  if (inCardioid(Y0)) {
+    escape.iterations = N;
+    escape.smoothing = 0.0;
+    return escape;
+  }
+  
   Z = Z0;
   for (escape.iterations = 0; escape.iterations < N; escape.iterations++) {
     Z = sq(Z) + Z0;

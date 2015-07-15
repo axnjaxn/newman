@@ -8,7 +8,8 @@ class Mandelbrot {
 protected:
   RenderGrid grid;
   std::vector<HPComplex> X, A, B, C;
-  
+
+  bool inCardioid(const HPComplex& Z);
   void findProbe();
   void computeOrbit(const HPComplex& X0);
   void computeSeries();
