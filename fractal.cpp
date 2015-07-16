@@ -9,24 +9,16 @@ void FractalViewer::save() {
   std::string fn;
   if (!display->getString("Enter a filename to save:", fn)) return;
 
-  HPComplex corner, sz;
-  mandel.getCorner(corner);
-  sz = mandel.sz;
-  
-  HPComplex center;
-  center.re = corner.re + (img.nc / 2) * sz.re;
-  center.im = corner.im + (img.nr / 2) * sz.im;
-    
   FILE* fp = fopen(fn.c_str(), "w");
   if (fp) {
     fprintf(fp, "%d\n", mandel.N);
-    mpf_out_str(fp, 10, 0, center.re.get_mpf_t());
+    mpf_out_str(fp, 10, 0, mandel.center.re.get_mpf_t());
     fprintf(fp, "\n");
-    mpf_out_str(fp, 10, 0, center.im.get_mpf_t());
+    mpf_out_str(fp, 10, 0, mandel.center.im.get_mpf_t());
     fprintf(fp, "\n");
-    mpf_out_str(fp, 10, 0, sz.re.get_mpf_t());
+    mpf_out_str(fp, 10, 0, mandel.sz.re.get_mpf_t());
     fprintf(fp, "\n");
-    mpf_out_str(fp, 10, 0, sz.im.get_mpf_t());
+    mpf_out_str(fp, 10, 0, mandel.sz.im.get_mpf_t());
     fprintf(fp, "\n");
     fclose(fp);
     display->print("Saved to " + fn);
