@@ -34,7 +34,6 @@ void FractalViewer::load() {
   std::string fn;
   if (!display->getString("Enter a filename to load:", fn)) return;
 
-  HPComplex center;
   FILE* fp = fopen(fn.c_str(), "r");
   if (fp) {
     fclose(fp);
@@ -383,35 +382,14 @@ void FractalViewer::handleEvent(SDL_Event event) {
     }
   }
   else if (event.type == SDL_MOUSEBUTTONUP && mousedown) {
-    HPComplex corner, sz;
-    mandel.getCorner(corner);
-    sz = mandel.sz;
-   
     if (mousedown == 1) {
-      HPComplex pt;
-      pt.re = corner.re + sc * mx * sz.re;
-      pt.im = corner.im + (sc * img.nr - sc * my - 1) * sz.im;
-	
-      sz.re *= (1.0 / scale);
-      sz.im *= (1.0 / scale);
-	
-      corner.re = pt.re - sc * mx * sz.re;
-      corner.im = pt.im - (sc * img.nr - sc * my - 1) * sz.im;
-	
+      mandel.zoomAt(scale, my, mx, sc);      
       renderflag = true;
     }
-
     else if (mousedown == 2) {
-      HPComplex mv;
-      mv.re = sc * (mx - nx);
-      mv.im = sc * (ny - my);
-      corner.re = corner.re + mv.re * sz.re;
-      corner.im = corner.im + mv.im * sz.im;
-
+      mandel.translate(ny - my, nx - mx, sc);
       renderflag = true;
     }
-
-    mandel.setCornerSize(corner, sz);
 
     mousedown = 0;
   }

@@ -24,8 +24,6 @@ public:
   Mandelbrot(int nr, int nc);
 
   //TODO: Remove legacy functionality
-  void getCorner(HPComplex& corner) const;
-  void setCornerSize(HPComplex& corner, HPComplex& sz);
   void loadLegacy(const char* fn);
   
   inline int rows() const {return grid.nr;}
@@ -35,6 +33,10 @@ public:
   void precompute();
   void computeRow(int r);
 
+  HPComplex pointAt(int r, int c, int sc = 1) const;
+  void translate(int dr, int dc, int sc = 1);
+  void zoomAt(float scale, int r, int c, int sc = 1);
+  
   const RenderGrid::EscapeValue& at(int r, int c);
   RenderGrid::EscapeValue at(int r, int c, int sc); //Averages values
   

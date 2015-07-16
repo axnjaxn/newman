@@ -12,17 +12,6 @@ Mandelbrot::Mandelbrot(int nr, int nc) : grid(nr, nc) {
   sz.re = 4.0 / nc; sz.im = 3.0 / nr;  
 }
 
-void Mandelbrot::getCorner(HPComplex& corner) const {
-  corner.re = center.re - (cols() / 2) * sz.re;
-  corner.im = center.im - (rows() / 2) * sz.im;  
-}
-
-void Mandelbrot::setCornerSize(HPComplex& corner, HPComplex& sz) {
-  center.re = corner.re + (cols() / 2) * sz.re;
-  center.im = corner.im + (rows() / 2) * sz.im;
-  this->sz = sz;
-}
-
 void Mandelbrot::loadLegacy(const char* fn) {
   FILE* fp = fopen(fn, "r");
   if (fp) {
@@ -253,6 +242,30 @@ void Mandelbrot::computeRow(int r) {
       pt.re = center.re + (c - cols() / 2) * sz.re;
       grid.at(r, c) = getIterations(pt);
     }
+}
+
+HPComplex Mandelbrot::pointAt(int r, int c, int sc) const {
+  HPComplex pt;
+  pt.re = center.re + (sc * c - cols() / 2) * sz.re;
+  pt.im = center.im + (rows() / 2 - sc * r - 1) * sz.im;
+  return pt;
+}
+
+void Mandelbrot::translate(int dr, int dc, int sc) {
+  center.re = center.re - dc * sc * sz.re;
+  center.im = center.im + dr * sc * sz.im;
+}
+
+void Mandelbrot::zoomAt(float scale, int r, int c, int sc) {
+  HPComplex pt;
+  pt.re = center.re + (sc * c - cols() / 2) * sz.re;
+  pt.im = center.im + (rows() / 2 - sc * r - 1) * sz.im;
+  
+  sz.re *= (1.0 / scale);
+  sz.im *= (1.0 / scale);
+  
+  center.re = pt.re - (sc * c - cols() / 2) * sz.re;
+  center.im = pt.im - (rows() / 2 - sc * r - 1) * sz.im;
 }
 
 const RenderGrid::EscapeValue& Mandelbrot::at(int r, int c) {return grid.at(r, c);}
