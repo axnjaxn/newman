@@ -9,7 +9,9 @@ Mandelbrot::Mandelbrot(int nr, int nc) : grid(nr, nc) {
   N = 256;
 
   center.re = -0.5; center.im = 0.0;
-  sz.re = 4.0 / nc; sz.im = 3.0 / nr;  
+  sz.re = 4.0 / nc; sz.im = 3.0 / nr;
+
+  setPrecision();
 }
 
 void Mandelbrot::loadLegacy(const char* fn) {
@@ -25,7 +27,30 @@ void Mandelbrot::loadLegacy(const char* fn) {
 
     sz.re = sz.re * (800.0 / cols());
     sz.im = sz.im * (600.0 / rows());
+
+    setPrecision();
   }
+}
+
+void Mandelbrot::setPrecision() {
+  const double log_alpha = log2(1.0e-20);
+  const int beta = 64;
+
+  signed long int e;
+  mpf_get_d_2exp(&e, sz.re.get_mpf_t());
+  
+  int bits = (int)(beta - e + log_alpha);
+  if (bits < 64) bits = 64;
+
+  mpf_set_default_prec(bits);//TODO: Determine if this is a necessary line
+  center.re.set_prec(bits);
+  center.im.set_prec(bits);
+  sz.re.set_prec(bits);
+  sz.im.set_prec(bits);
+  X.clear();
+  A.clear();
+  B.clear();
+  C.clear();
 }
 
 constexpr double bailout = 1024.0;
@@ -68,7 +93,7 @@ void Mandelbrot::findProbe() {
 }
 
 void Mandelbrot::computeOrbit(const HPComplex& X0) {
-  X.resize(N);
+  X.clear(); X.resize(N);
   X[0].re = X0.re; X[0].im = X0.im;
 
   for (int i = 1; i < X.size(); i++) {
@@ -111,7 +136,7 @@ static double getSmoothingMagnitude(const LPComplex& z) {
 static bool isUnstable(const LPComplex& bterm, const LPComplex& cterm) {
   double bmag = bterm.re * bterm.re + bterm.im * bterm.im;
   double cmag = cterm.re * cterm.re + cterm.im * cterm.im;
-  return (cmag && 1e5 * cmag >= bmag);
+  return (1e5 * cmag >= bmag);
 }
 
 RenderGrid::EscapeValue Mandelbrot::getIterations(const HPComplex& Y0) {
@@ -134,7 +159,8 @@ RenderGrid::EscapeValue Mandelbrot::getIterations(const HPComplex& Y0) {
   eps3 = eps * eps2;
 
   std::vector<LPComplex> d(X.size());
-  for (int i = 0; i < X.size(); i++) {
+  d[0] = eps;
+  for (int i = 1; i < X.size(); i++) {
     a.re = A[i].re.get_d(); a.im = A[i].im.get_d();
     b.re = B[i].re.get_d(); b.im = B[i].im.get_d();
     c.re = C[i].re.get_d(); c.im = C[i].im.get_d();
@@ -165,8 +191,10 @@ RenderGrid::EscapeValue Mandelbrot::getIterations(const HPComplex& Y0) {
     mid = (low + high) / 2;
   }
   if (found < d.size()) {
+    Y.re = X[found].re + d[found].re;
+    Y.im = X[found].im + d[found].im;
     escape.iterations = found;
-    escape.smoothing = getSmoothingMagnitude(d[found]);
+    escape.smoothing = getSmoothingMagnitude(descend(Y));
     return escape;
   }
   
@@ -224,6 +252,8 @@ bool Mandelbrot::useHardware() {
 
 void Mandelbrot::precompute() {
   if (useHardware()) return;
+  //setPrecision();
+  X.clear(); A.clear(); B.clear(); C.clear();
   findProbe();
   computeSeries();
 }
@@ -266,6 +296,8 @@ void Mandelbrot::zoomAt(float scale, int r, int c, int sc) {
   
   center.re = pt.re - (sc * c - cols() / 2) * sz.re;
   center.im = pt.im - (rows() / 2 - sc * r - 1) * sz.im;
+
+  setPrecision();
 }
 
 const RenderGrid::EscapeValue& Mandelbrot::at(int r, int c) {return grid.at(r, c);}
@@ -294,6 +326,8 @@ void Mandelbrot::scaleUp(int sc) {
   grid = std::move(scaled);
   sz.re = sz.re / sc;
   sz.im = sz.im / sc;
+
+  setPrecision();
 }
 
 void Mandelbrot::scaleDown(int sc) {
@@ -306,6 +340,8 @@ void Mandelbrot::scaleDown(int sc) {
   grid = std::move(scaled);
   sz.re = sz.re * sc;
   sz.im = sz.im * sc;
+
+  setPrecision();
 }
 
 void Mandelbrot::load(const char* fn) { }//TODO: Format TBD

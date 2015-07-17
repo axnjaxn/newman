@@ -9,6 +9,8 @@ protected:
   RenderGrid grid;
   std::vector<HPComplex> X, A, B, C;
 
+  void setPrecision();
+  
   bool inCardioid(const HPComplex& Z);
   void findProbe();
   void computeOrbit(const HPComplex& X0);
