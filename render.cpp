@@ -286,6 +286,13 @@ void Mandelbrot::translate(int dr, int dc, int sc) {
   center.im = center.im + dr * sc * sz.im;
 }
 
+void Mandelbrot::zoom(float scale) {
+  sz.re *= (1.0 / scale);
+  sz.im *= (1.0 / scale);
+  
+  setPrecision();
+}
+
 void Mandelbrot::zoomAt(float scale, int r, int c, int sc) {
   HPComplex pt;
   pt.re = center.re + (sc * c - cols() / 2) * sz.re;

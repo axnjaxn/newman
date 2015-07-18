@@ -5,9 +5,11 @@
 #include "multiwave.h"
 #include <byteimage/osd.h>
 #include <byteimage/widget.h>
+#include <byteimage/video.h>
 
 using byteimage::Color;
 using byteimage::ByteImage;
+using byteimage::VideoWriter;
 using byteimage::OSD_Scanner;
 using byteimage::Widget;
 using byteimage::WidgetDisplay;
@@ -18,6 +20,11 @@ protected:
   bool renderflag; //Requires recomputation
   bool drawlines;  //This forces progress display
   bool smoothflag; //Smooth coloring
+  bool zoomflag;   //Constant zoom
+
+  //For autozoom
+  HPComplex saved_center;
+  VideoWriter writer;
 
   //Numerical results of latest render
   Mandelbrot mandel;
@@ -41,6 +48,8 @@ protected:
   void constructDefaultPalette();
   void updatePalette();
   void reset();
+
+  void initAutoZoom();
   
   void recolor();
   Color getColor(const RenderGrid::EscapeValue& escape);

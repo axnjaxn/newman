@@ -37,6 +37,7 @@ public:
 
   HPComplex pointAt(int r, int c, int sc = 1) const;
   void translate(int dr, int dc, int sc = 1);
+  void zoom(float scale);
   void zoomAt(float scale, int r, int c, int sc = 1);
   
   const RenderGrid::EscapeValue& at(int r, int c);

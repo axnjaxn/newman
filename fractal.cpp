@@ -70,6 +70,7 @@ void FractalViewer::updatePalette() {
 
 void FractalViewer::reset() {
   renderflag = drawlines = smoothflag = true;
+  zoomflag = false;
   mousedown = 0;
 
   mandel = Mandelbrot(img.nr, img.nc);
@@ -129,12 +130,23 @@ bool FractalViewer::drawLine(int r) {
 
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
-    if (event.type == SDL_MOUSEBUTTONDOWN
-	|| (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE)
-	|| (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE)
-	|| event.type == SDL_QUIT) {
-      SDL_PushEvent(&event);
-      return true;
+    if (zoomflag) {
+      if ((event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE)
+	  || (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE)
+	  || event.type == SDL_QUIT) {
+	SDL_PushEvent(&event);
+	zoomflag = false;
+	return true;
+      }
+    }
+    else {
+      if (event.type == SDL_MOUSEBUTTONDOWN
+	  || (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE)
+	  || (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE)
+	  || event.type == SDL_QUIT) {
+	SDL_PushEvent(&event);
+	return true;
+      }
     }
   }
 
@@ -171,7 +183,6 @@ void FractalViewer::render() {
   display->setRenderFlag();
 }
 
-//TODO: A lot of work
 void FractalViewer::beautyRender() {
   MyDisplay* display = (MyDisplay*)this->display;
   display->setTitle("Creating beauty render...");
@@ -243,7 +254,14 @@ void FractalViewer::beautyRender() {
 
 void FractalViewer::update() {
   display->frameDelay = 0;
-    
+
+  if (zoomflag) {
+    renderflag = true;
+    mandel.zoom(1.05);
+    mandel.center.re = saved_center.re;
+    mandel.center.im = saved_center.im;
+  }
+  
   if (renderflag) {
     display->setTitle("Rendering...");
     Uint32 ticks = SDL_GetTicks();
@@ -255,6 +273,10 @@ void FractalViewer::update() {
     
     renderflag = false;
     display->setRenderFlag();
+  }
+
+  if (zoomflag) {
+    writer.write(img);
   }
 
   if (!mousedown) display->frameDelay = 25;
@@ -354,6 +376,9 @@ void FractalViewer::handleKeyEvent(SDL_Event event) {
 	display->print("%d iterations.", mandel.N);
       }
       break;
+    case SDLK_z:
+      if (!zoomflag) initAutoZoom();
+      break;
     }
 }
 
@@ -393,6 +418,17 @@ void FractalViewer::handleEvent(SDL_Event event) {
 
     mousedown = 0;
   }
+}
+
+void FractalViewer::initAutoZoom() {
+  zoomflag = true;
+  saved_center.re = mandel.center.re;
+  saved_center.im = mandel.center.im;
+  mandel.sz.re = 4.0 / mandel.cols(); mandel.sz.im = 3.0 / mandel.rows();
+  
+  char fn[256];
+  sprintf(fn, "%d.avi", (int)time(NULL));
+  writer.open(fn, img.nr, img.nc, 30);	      
 }
 
 void FractalViewer::render(ByteImage& canvas, int x, int y) {
