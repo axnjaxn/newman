@@ -176,21 +176,25 @@ RenderGrid::EscapeValue Mandelbrot::getIterations(const HPComplex& Y0) {
     d[i] = a + b + c;
   }
 
-  int low = 0, high = d.size() - 1, mid = d.size() / 2, found = d.size();
-  while (low <= high) {
-    Y.re = X[mid].re + d[mid].re;
-    Y.im = X[mid].im + d[mid].im;
+  int found = d.size() - 1;
+  Y.re = X[found].re + d[found].re;
+  Y.im = X[found].im + d[found].im;
+  if (bailedOut(Y)) {  
+    int low = 0, high = d.size() - 1, mid = d.size() / 2;
+    while (low <= high) {
+      Y.re = X[mid].re + d[mid].re;
+      Y.im = X[mid].im + d[mid].im;
 
-    if (!bailedOut(Y))
-      low = mid + 1;
-    else {
-      high = mid - 1;
-      found = mid;
-    }
+      if (!bailedOut(Y))
+	low = mid + 1;
+      else {
+	high = mid - 1;
+	found = mid;
+      }
     
-    mid = (low + high) / 2;
-  }
-  if (found < d.size()) {
+      mid = (low + high) / 2;
+    }
+
     Y.re = X[found].re + d[found].re;
     Y.im = X[found].im + d[found].im;
     escape.iterations = found;
@@ -199,8 +203,8 @@ RenderGrid::EscapeValue Mandelbrot::getIterations(const HPComplex& Y0) {
   }
   
   HPComplex Yn;
-  Y.re = Yn.re = X[d.size() - 1].re + d[d.size() - 1].re;
-  Y.im = Yn.im = X[d.size() - 1].im + d[d.size() - 1].im;
+  Yn.re = Y.re;
+  Yn.im = Y.im;
   for (int i = d.size(); i < N; i++) {
     Yn.re = Y.re * Y.re - Y.im * Y.im + Y0.re;
     Yn.im = 2.0 * (Y.re * Y.im) + Y0.im;
