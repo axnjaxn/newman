@@ -255,12 +255,8 @@ void FractalViewer::beautyRender() {
 void FractalViewer::update() {
   display->frameDelay = 0;
 
-  if (zoomflag) {
+  if (zoomflag)
     renderflag = true;
-    mandel.zoom(1.05);
-    mandel.center.re = saved_center.re;
-    mandel.center.im = saved_center.im;
-  }
   
   if (renderflag) {
     display->setTitle("Rendering...");
@@ -277,6 +273,10 @@ void FractalViewer::update() {
 
   if (zoomflag) {
     writer.write(img);
+    mandel.zoom(1.05);
+    mandel.center.re = saved_center.re;
+    mandel.center.im = saved_center.im;
+    renderflag = true;
   }
 
   if (!mousedown) display->frameDelay = 25;
