@@ -1,4 +1,4 @@
-#include "fractal.h"
+#include "viewer.h"
 #include "display.h"
 
 using namespace byteimage;

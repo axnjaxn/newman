@@ -1,5 +1,5 @@
-#ifndef _BPJ_NEWMANDEL_COMPLEX_H
-#define _BPJ_NEWMANDEL_COMPLEX_H
+#ifndef _BPJ_NEWMAN_COMPLEX_H
+#define _BPJ_NEWMAN_COMPLEX_H
 
 #include <gmpxx.h>
 

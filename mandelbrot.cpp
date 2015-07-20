@@ -1,4 +1,4 @@
-#include "render.h"
+#include "mandelbrot.h"
 #include <byteimage/types.h>
 
 using namespace byteimage;

@@ -1,5 +1,5 @@
-#ifndef _BPJ_NEWMANDEL_RENDER_H
-#define _BPJ_NEWMANDEL_RENDER_H
+#ifndef _BPJ_NEWMAN_MANDELBROT_H
+#define _BPJ_NEWMAN_MANDELBROT_H
 
 #include "grid.h"
 #include "complex.h"

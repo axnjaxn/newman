@@ -1,6 +1,6 @@
 *~
 *.o
-mandel
+newman
 *.dat
 *.pal
 *.png

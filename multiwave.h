@@ -1,5 +1,5 @@
-#ifndef _BPJ_MULTIWAVE_H
-#define _BPJ_MULTIWAVE_H
+#ifndef _BPJ_NEWMAN_MULTIWAVE_H
+#define _BPJ_NEWMAN_MULTIWAVE_H
 
 #include <byteimage/palette.h>
 

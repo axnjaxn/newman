@@ -1,7 +1,7 @@
-#ifndef _BPJ_NEWMANDEL_DISPLAY_H
-#define _BPJ_NEWMANDEL_DISPLAY_H
+#ifndef _BPJ_NEWMAN_DISPLAY_H
+#define _BPJ_NEWMAN_DISPLAY_H
 
-#include "fractal.h"
+#include "viewer.h"
 #include "editor.h"
 
 #include <byteimage/osd.h>

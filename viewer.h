@@ -1,7 +1,7 @@
-#ifndef _BPJ_NEWMANDEL_FRACTAL_H
-#define _BPJ_NEWMANDEL_FRACTAL_H
+#ifndef _BPJ_NEWMAN_VIEWER_H
+#define _BPJ_NEWMAN_VIEWER_H
 
-#include "render.h"
+#include "mandelbrot.h"
 #include "multiwave.h"
 #include <byteimage/osd.h>
 #include <byteimage/widget.h>

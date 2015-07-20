@@ -1,5 +1,5 @@
-#ifndef _BPJ_PALETTE_EDITOR_H
-#define _BPJ_PALETTE_EDITOR_H
+#ifndef _BPJ_NEWMAN_EDITOR_H
+#define _BPJ_NEWMAN_EDITOR_H
 
 #include "multiwave.h"
 
