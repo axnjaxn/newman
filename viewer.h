@@ -3,13 +3,13 @@
 
 #include "mandelbrot.h"
 #include "multiwave.h"
+#include "video.h"
 #include <byteimage/osd.h>
 #include <byteimage/widget.h>
-#include <byteimage/video.h>
+
 
 using byteimage::Color;
 using byteimage::ByteImage;
-using byteimage::VideoWriter;
 using byteimage::OSD_Scanner;
 using byteimage::Widget;
 using byteimage::WidgetDisplay;
@@ -24,7 +24,7 @@ protected:
 
   //For autozoom
   HPComplex saved_center;
-  VideoWriter writer;
+  VideoZoom zoom;
 
   //Numerical results of latest render
   Mandelbrot mandel;

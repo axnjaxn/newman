@@ -255,8 +255,7 @@ void FractalViewer::beautyRender() {
 void FractalViewer::update() {
   display->frameDelay = 0;
 
-  if (zoomflag)
-    renderflag = true;
+  if (zoomflag) renderflag = true;
   
   if (renderflag) {
     display->setTitle("Rendering...");
@@ -264,19 +263,31 @@ void FractalViewer::update() {
     render();
     ticks = SDL_GetTicks() - ticks;
     char str[256];
-    sprintf(str, "Time: %dms", ticks);
-    display->setTitle(str);
-    
+
     renderflag = false;
     display->setRenderFlag();
-  }
 
-  if (zoomflag) {
-    writer.write(img);
-    mandel.zoom(1.05);
-    mandel.center.re = saved_center.re;
-    mandel.center.im = saved_center.im;
-    renderflag = true;
+    if (zoomflag) {
+      ByteImage saved = std::move(img);
+      img = ByteImage(saved.nr * 3 / 2, saved.nc * 3 / 2, 3);
+      sc = 2;
+      recolor();
+
+      sprintf(str, "Time: %dms (Rendering video frames)", ticks);
+      display->setTitle(str);
+      zoom.nextFrame(img);
+    
+      img = std::move(saved);
+      sc = 3;
+    
+      mandel.zoom(1.5);
+      mandel.center.re = saved_center.re;
+      mandel.center.im = saved_center.im;
+    }
+    else {
+      sprintf(str, "Time: %dms", ticks);
+      display->setTitle(str);
+    }      
   }
 
   if (!mousedown) display->frameDelay = 25;
@@ -356,7 +367,8 @@ void FractalViewer::handleKeyEvent(SDL_Event event) {
     case SDLK_s:
       smoothflag = !smoothflag;
       display->print("Smoothing: %s", smoothflag? "on" : "off");
-      renderflag = true;
+      recolor();
+      display->setRenderFlag();
       break;
     case SDLK_d:
       drawlines = !drawlines;
@@ -425,10 +437,13 @@ void FractalViewer::initAutoZoom() {
   saved_center.re = mandel.center.re;
   saved_center.im = mandel.center.im;
   mandel.sz.re = 4.0 / mandel.cols(); mandel.sz.im = 3.0 / mandel.rows();
+
+  mandel.scaleDown(sc);
+  mandel.scaleUp(sc = 3);
   
   char fn[256];
   sprintf(fn, "%d.avi", (int)time(NULL));
-  writer.open(fn, img.nr, img.nc, 30);	      
+  zoom.start(fn, img.nr, img.nc, 45);
 }
 
 void FractalViewer::render(ByteImage& canvas, int x, int y) {
