@@ -136,7 +136,7 @@ static double getSmoothingMagnitude(const LPComplex& z) {
 static bool isUnstable(const LPComplex& bterm, const LPComplex& cterm) {
   double bmag = bterm.re * bterm.re + bterm.im * bterm.im;
   double cmag = cterm.re * cterm.re + cterm.im * cterm.im;
-  return (1e5 * cmag >= bmag);
+  return (bmag * 1e-5 < cmag);
 }
 
 RenderGrid::EscapeValue Mandelbrot::getIterations(const HPComplex& Y0) {
@@ -169,7 +169,9 @@ RenderGrid::EscapeValue Mandelbrot::getIterations(const HPComplex& Y0) {
     b = b * eps2;
     c = c * eps3;
     if (isUnstable(b, c)) {
-      d.resize(i / 2 + 1);
+      int good = i - 3;
+      if (good < 1) good = 1;
+      d.resize(good);
       break;
     }
     
