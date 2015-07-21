@@ -20,7 +20,7 @@ palette generation method invented by Pauldelbrot.
 2. Installation
 ---------------
 
-This program depends on [SDL2](http://libsdl.org), FreeType (http://freetype.org), and
+This program depends on [SDL2](http://libsdl.org), [FreeType](http://freetype.org), and
 [libbyteimage](http://github.com/axnjaxn/libbyteimage) (which must be compiled with SDL2 and FreeType
 support).
 
