@@ -20,9 +20,8 @@ palette generation method invented by Pauldelbrot.
 2. Installation
 ---------------
 
-This program depends on [SDL2](http://libsdl.org), [FreeType](http://freetype.org), and
-[libbyteimage](http://github.com/axnjaxn/libbyteimage) (which must be compiled with SDL2 and FreeType
-support).
+This program depends on [Magick++](http://www.imagemagick.org/Magick++/), [SDL2](http://libsdl.org), [FreeType](http://freetype.org), and
+[libbyteimage](http://github.com/axnjaxn/libbyteimage) (which must be compiled with support for the other libraries).
 
 If you have a make-compatible build system installed with support for C++11, you can execute `make` to
 build the software. Currently, it looks for its font, FreeSans (from GNU FreeFont) in the res
