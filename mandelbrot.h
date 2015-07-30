@@ -10,6 +10,7 @@ protected:
   std::vector<HPComplex> X, A, B, C;
 
   void setPrecision();
+  bool isUnstable(const LPComplex& bterm, const LPComplex& cterm);
   
   bool inCardioid(const HPComplex& Z);
   void findProbe();
@@ -19,6 +20,7 @@ protected:
   RenderGrid::EscapeValue getIterationsHW(const HPComplex& Y0);
   
 public:
+  double error_tolerance;
   int N;
   HPComplex center, sz;
 

@@ -6,6 +6,8 @@ using namespace byteimage;
 Mandelbrot::Mandelbrot() : Mandelbrot(1, 1) { }
 
 Mandelbrot::Mandelbrot(int nr, int nc) : grid(nr, nc) {
+  error_tolerance = 1e-10;
+  
   N = 256;
 
   center.re = -0.5; center.im = 0.0;
@@ -133,10 +135,10 @@ static double getSmoothingMagnitude(const LPComplex& z) {
   return 1.0 - log2(0.5 * log(r2) / log(bailout));
 }
 
-static bool isUnstable(const LPComplex& bterm, const LPComplex& cterm) {
+bool Mandelbrot::isUnstable(const LPComplex& bterm, const LPComplex& cterm) {
   double bmag = bterm.re * bterm.re + bterm.im * bterm.im;
   double cmag = cterm.re * cterm.re + cterm.im * cterm.im;
-  return (bmag * 1e-5 < cmag);
+  return (bmag * error_tolerance < cmag);
 }
 
 RenderGrid::EscapeValue Mandelbrot::getIterations(const HPComplex& Y0) {

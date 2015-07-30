@@ -68,6 +68,8 @@ B - Start a beauty render
 
 D - Toggle line-by-line preview
 
+E - Change error tolerance for series approximation (1e-10 is the default value)
+
 I - Set iteration count
 
 P - Switch to palette editor

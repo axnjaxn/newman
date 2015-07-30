@@ -306,6 +306,7 @@ FractalViewer::FractalViewer(WidgetDisplay* display, int h, int w) : Widget(disp
 void FractalViewer::handleKeyEvent(SDL_Event event) {
   MyDisplay* display = (MyDisplay*)this->display;
   int n;
+  double d;
   if (event.type == SDL_KEYDOWN)
     switch (event.key.keysym.sym) {
     case SDLK_F5: display->setRenderFlag(); break;
@@ -391,6 +392,11 @@ void FractalViewer::handleKeyEvent(SDL_Event event) {
     case SDLK_z:
       if (!zoomflag) initAutoZoom();
       break;
+    case SDLK_e:
+      if (display->getDouble("Enter an error tolerance:", d)) {
+	mandel.error_tolerance = d;
+	renderflag = true;
+      }
     }
 }
 
